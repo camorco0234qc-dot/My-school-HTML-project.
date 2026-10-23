@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PetFeed</title>
+<meta name="description" content="PetFeed: a web-based point-of-sale and inventory management system (prototype, M1)">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ===== 1. STYLES (colors as tokens so light/dark both work) ===== */
+:root{--teal:#0a6b69;--teal2:#085452;--orange:#f4a23a;--bg:#f5f5f5;--card:#fff;--ink:#1d2b29;--mut:#6b7775;--line:#dfe3e2;--sel:#e6f0ef;
+ --red:#9b1c1c;--redbg:#fbdcdc;--grn:#1f6b36;--grnbg:#dcf0e0;--amb:#8a5200;--ambbg:#fbeacb;--gry:#e3e8e7;
+ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121a19;--card:#1b2625;--ink:#e8efee;--mut:#9aa9a7;--line:#2f3d3b;--sel:#22403e;--redbg:#4a2222;--grnbg:#1f3d2a;--ambbg:#4a3a1c;--gry:#2a3735;--red:#f2a0a0;--grn:#8fd6a3;--amb:#f0c27a}}
+:root[data-theme="dark"]{--bg:#121a19;--card:#1b2625;--ink:#e8efee;--mut:#9aa9a7;--line:#2f3d3b;--sel:#22403e;--redbg:#4a2222;--grnbg:#1f3d2a;--ambbg:#4a3a1c;--gry:#2a3735;--red:#f2a0a0;--grn:#8fd6a3;--amb:#f0c27a}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Nunito,"Segoe UI",system-ui,sans-serif;font-size:15px}
+h1{font-size:28px;margin:0 0 4px}h2{font-size:18px;margin:0 0 10px}
+a{color:var(--teal);font-weight:700;text-decoration:none}
+.mut{color:var(--mut);margin:0}
+label{display:block;font-weight:700;margin:14px 0 6px}
+input,select{width:100%;padding:12px 14px;border:1px solid #8a9997;border-radius:12px;font:inherit;background:var(--card);color:var(--ink)}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.hint{font-size:12.5px;color:var(--mut);margin:5px 0 0}
+.btn{background:var(--teal);color:#fff;border:0;border-radius:12px;padding:13px 18px;font:inherit;font-weight:800;cursor:pointer}
+.btn:hover{background:var(--teal2)}.btn.full{width:100%;margin-top:18px}
+.btn.alt{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--card);color:var(--red);border:1px solid var(--red)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px}
+.note{min-height:20px;margin:12px 0 0;font-weight:700;font-size:14px}.note.err{color:var(--red)}.note.ok{color:var(--grn)}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:800;background:var(--gry)}
+.pill.g{background:var(--grnbg);color:var(--grn)}
+.lg{display:inline-flex;width:42px;height:42px;border-radius:12px;background:var(--orange);align-items:center;justify-content:center}
+.brand{display:flex;align-items:center;gap:12px;font-size:24px;font-weight:800}
+/* Login: split layout */
+.split{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
+.split .left{background:var(--teal);color:#fff;padding:48px;display:flex;flex-direction:column;justify-content:space-between}
+.split .left h2{font-size:42px;line-height:1.15;margin:0 0 14px}
+.split .left ul{list-style:none;padding:0;margin:20px 0 0}.split .left li{margin:10px 0;font-weight:700}
+.split .left li:before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--orange);margin-right:12px}
+.split .right{display:flex;align-items:center;justify-content:center;padding:24px}
+.box{width:100%;max-width:420px}
+.center{max-width:460px;margin:0 auto;padding:36px 16px}.center .brand{justify-content:center;margin-bottom:22px}
+.eye{position:absolute;right:12px;top:34px;background:none;border:0;cursor:pointer;color:var(--mut);padding:4px}
+.banner{background:var(--ambbg);color:var(--amb);border-radius:12px;padding:14px;font-weight:800;margin-bottom:14px}
+.staffbox{background:var(--bg);border-radius:12px;padding:14px;margin:14px 0}
+.code{font-size:26px;font-weight:800;letter-spacing:2px;text-align:center;background:var(--bg);border:2px dashed var(--teal);border-radius:12px;padding:18px;margin:14px 0;word-break:break-all}
+/* App shell */
+.shell{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
+aside{background:var(--teal);color:#fff;padding:20px 14px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+aside .brand{font-size:22px;margin:0 6px 24px}
+aside nav{flex:1}
+aside a{display:block;color:#fff;padding:11px 14px;border-radius:12px;margin-bottom:4px}
+aside a.on{background:#fff;color:#12312f}
+aside .foot span{display:block;padding:6px 14px;font-weight:700;font-size:14px}
+main{padding:28px;min-width:0}
+.two{display:grid;grid-template-columns:1fr 330px;gap:24px;align-items:start}
+.hd{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap}
+.tbl{padding:0;overflow-x:auto}table{width:100%;border-collapse:collapse}
+th{text-align:left;color:var(--mut);font-size:13px;padding:12px 16px;border-bottom:1px solid var(--line)}
+td{padding:14px 16px;border-bottom:1px solid var(--line)}tr.row{cursor:pointer}tr.sel td{background:var(--sel)}
+.kv{display:flex;justify-content:space-between;padding:7px 0}.kv span{color:var(--mut)}
+.form{max-width:640px}
+@media (max-width:860px){
+ .split{grid-template-columns:1fr}.split .left{display:none}
+ .shell{grid-template-columns:1fr}
+ aside{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px}
+ aside .brand{margin:0 8px 0 0}aside nav{display:flex;flex-wrap:wrap;gap:4px;flex:1 1 100%;order:3}
+ aside .foot{display:flex;flex-wrap:wrap;align-items:center;order:2;margin-left:auto}aside .foot a{margin:0}
+ .two{grid-template-columns:1fr}main{padding:16px}
+}
+@media print{body *{visibility:hidden}.code,.code *{visibility:visible}.code{position:absolute;top:20px;left:0;right:0}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ===== 2. SMALL HELPERS ===== */
+const $ = s => document.querySelector(s);
+const f = id => $('#' + id).value;                       // read an input's value
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); // stop XSS
+const cap = s => s[0] + s.slice(1).toLowerCase();
+// Dates look like "Oct 15, 2026, 4:42 PM" in Manila time
+const fmt = t => new Date(t).toLocaleString('en-US', {timeZone:'Asia/Manila', month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit'});
+const mem = {};                                          // fallback if the browser blocks storage
+
+/* ===== 3. DATA LAYER =====
+   PROTOTYPE ONLY: data lives in this browser's localStorage.
+   When we host it, only this section is replaced by calls to a real server + database. */
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return mem[k] || null; } },
+  set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){ mem[k] = v; } }
+};
+const DB = {
+  load(){ return store.get('pf_db') || {users:[], nextId:1,
+    settings:{shop_name:'', shop_address:'', shop_contact:'', expiry_alert_days:30}}; },
+  save(d){ store.set('pf_db', d); }
+};
+let db = DB.load();
+let me = null;                                           // the logged-in user
+
+/* Passwords are salted + hashed (SHA-256 here; the real server will use argon2id/bcrypt). Never stored as plain text. */
+const toHex = a => [...new Uint8Array(a)].map(x => x.toString(16).padStart(2,'0')).join('');
+const sha = async (t, salt) => toHex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ':' + t)));
+async function makeHash(t){ const s = toHex(crypto.getRandomValues(new Uint8Array(8))); return s + '$' + await sha(t, s); }
+async function checkHash(t, h){ const [s, x] = h.split('$'); return await sha(t, s) === x; }
+function newCode(){                                      // recovery code like XXXX-XXXX-XXXX-XXXX
+  const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', r = crypto.getRandomValues(new Uint8Array(16));
+  return [0,4,8,12].map(i => [...r.slice(i,i+4)].map(x => a[x % a.length]).join('')).join('-');
+}
+const cleanCode = c => c.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/* Rate limit: 5 wrong tries, then wait 1 minute */
+const tries = {};
+function limited(k){ const t = tries[k]; if (t && Date.now() - t.at > 60000) delete tries[k]; return !!tries[k] && tries[k].n >= 5; }
+function failed(k){ const t = tries[k] = tries[k] || {n:0}; t.n++; t.at = Date.now(); }
+
+/* Session: lasts 30 minutes of inactivity */
+function setSession(id){ const s = {id, t:Date.now()}; try { sessionStorage.setItem('pf_sess', JSON.stringify(s)); } catch(e){ mem.sess = s; } }
+function clearSession(){ try { sessionStorage.removeItem('pf_sess'); } catch(e){} delete mem.sess; }
+function getMe(){
+  let s; try { s = JSON.parse(sessionStorage.getItem('pf_sess')); } catch(e){ s = mem.sess; }
+  if (!s || Date.now() - s.t > 30*60000) { clearSession(); return null; }
+  const u = db.users.find(x => x.id === s.id);
+  if (!u || u.status !== 'ACTIVE') { clearSession(); return null; }
+  setSession(u.id); return u;
+}
+/* Permission guard: every Owner-only action calls this first (the real server will do the same check). */
+function need(role){ if (!me || me.role !== role) throw new Error('Not allowed'); }
+
+/* ===== 4. SHARED UI PIECES ===== */
+const LOGO = '<span class="lg"><svg viewBox="0 0 24 24" width="24" height="24" fill="#0a4a48" aria-hidden="true"><ellipse cx="12" cy="16" rx="5" ry="4"/><circle cx="5.5" cy="11" r="2"/><circle cx="9.5" cy="6.5" r="2"/><circle cx="14.5" cy="6.5" r="2"/><circle cx="18.5" cy="11" r="2"/></svg></span>';
+const EYE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const field = (id, label, type='text', ph='') => `<label for="${id}">${label}</label><input id="${id}" type="${type}" placeholder="${ph}" autocomplete="off">`;
+const noteBox = () => '<p id="note" class="note" role="alert"></p>';
+function say(t, good){ const n = $('#note'); n.textContent = t; n.className = 'note ' + (good ? 'ok' : 'err'); }
+const enter = fn => `onkeydown="if(event.key==='Enter'){${fn}()}"`;
+const authPage = inner => `<div class="center"><div class="brand">${LOGO}PetFeed</div><div class="card" ${enter('window.__enter')}>${inner}</div></div>`;
+const resetLink = '<p class="hint" style="text-align:center;margin-top:18px"><a href="#" onclick="resetDemo();return false">Reset prototype data (demo only)</a></p>';
+function resetDemo(){
+  if (!confirm('This erases ALL prototype data in this browser (users, settings). Continue?')) return;
+  try { localStorage.removeItem('pf_db'); } catch(e){} delete mem.pf_db; clearSession(); db = DB.load(); location.hash = '#/'; route();
+}
+function toggleEye(id){ const i = $('#' + id); i.type = i.type === 'password' ? 'text' : 'password'; }
+
+/* ===== 5. ROUTER (decides which screen to show) ===== */
+const BOTH = ['OWNER','STAFF'];
+const NAV = [
+  {id:'dashboard',     label:'Dashboard',       roles:['OWNER']},
+  {id:'sell',          label:'Sell (POS)',      roles:BOTH},
+  {id:'history',       label:'Sales History',   roles:BOTH},
+  {id:'inventory',     label:'Inventory',       roles:BOTH},
+  {id:'notifications', label:'Notifications',   roles:BOTH},
+  {id:'users',         label:'User Management', roles:['OWNER']},
+  {id:'settings',      label:'Settings',        roles:['OWNER']}
+];
+function route(){
+  const r = location.hash.replace('#/', '');
+  if (!db.users.length) return setupPage();                        // first run: no users yet
+  me = getMe();
+  if (!me) return r === 'forgot' ? forgotPage() : loginPage();     // not logged in: only login / forgot
+  if (me.must_change) return forcedPage();                         // must pick a new password first
+  const ok = NAV.filter(n => n.roles.includes(me.role)).map(n => n.id).concat('password');
+  if (!ok.includes(r)) { location.hash = '#/' + (me.role === 'OWNER' ? 'dashboard' : 'sell'); return; }
+  shell(r);
+}
+window.addEventListener('hashchange', route);
+
+function shell(r){
+  const links = NAV.filter(n => n.roles.includes(me.role)).map(n => `<a href="#/${n.id}" class="${r===n.id?'on':''}">${n.label}</a>`).join('');
+  $('#app').innerHTML = `<div class="shell"><aside><div class="brand">${LOGO}PetFeed</div><nav>${links}</nav>
+    <div class="foot"><span>Logged in as ${cap(me.role)}</span><a href="#/password" class="${r==='password'?'on':''}">Change Password</a><a href="#" onclick="logout();return false">Logout</a></div></aside><main id="main"></main></div>`;
+  (PAGES[r] || (() => {}))();
+}
+function logout(){ clearSession(); me = null; location.hash = '#/'; route(); }
+const soon = (t, m) => () => { $('#main').innerHTML = `<h1>${t}</h1><div class="card" style="margin-top:14px"><p class="mut">This screen is built in milestone ${m}.</p></div>`; };
+
+/* ===== 6. FIRST-RUN OWNER SETUP + RECOVERY CODE ===== */
+function setupPage(){
+  window.__enter = createOwner;
+  $('#app').innerHTML = authPage(`<h1>Welcome to PetFeed</h1><p class="mut">Create the Owner account to get started. There are no default logins.</p>
+    ${field('sn','Full name')}${field('su','Username')}${field('sp','Password','password')}<p class="hint">At least 8 characters.</p>${field('sc','Confirm password','password')}
+    ${noteBox()}<button class="btn full" onclick="createOwner()">Create Owner account</button>`) + resetLink;
+}
+async function createOwner(){
+  if (db.users.length) return;                                     // setup only works once
+  const name = f('sn').trim(), un = f('su').trim(), pw = f('sp');
+  if (!name || !un) return say('Full name and username are required.');
+  if (!/^[A-Za-z0-9._-]{3,20}$/.test(un)) return say('Username: 3 to 20 letters, numbers, dot, dash or underscore.');
+  if (pw.length < 8) return say('Password must be at least 8 characters.');
+  if (pw !== f('sc')) return say('The passwords do not match.');
+  const code = newCode();
+  const u = {id:db.nextId++, full_name:name, username:un, password_hash:await makeHash(pw), role:'OWNER', status:'ACTIVE',
+    must_change:false, recovery_hash:await makeHash(cleanCode(code)), last_login:Date.now(), created:Date.now()};
+  db.users.push(u); DB.save(db); setSession(u.id);
+  codePage(code, () => { location.hash = '#/'; route(); });
+}
+function codePage(code, next){                                     // shows the recovery code ONCE
+  window.__next = next; window.__enter = () => {};
+  $('#app').innerHTML = authPage(`<h1>Save your recovery code</h1><p class="mut">This code is the only way to reset the Owner password if you forget it. It is shown once. Save it somewhere safe.</p>
+    <div class="code">${code}</div><button class="btn alt full" onclick="window.print()">Print code</button>
+    <button class="btn full" onclick="window.__next()">I saved it, continue</button>`);
+}
+
+/* ===== 7. LOGIN / FORGOT PASSWORD / FORCED NEW PASSWORD ===== */
+function loginPage(){
+  window.__enter = doLogin;
+  $('#app').innerHTML = `<div class="split"><div class="left"><div class="brand">${LOGO}PetFeed</div>
+    <div><h2>Sales and stock, in one place.</h2><p style="opacity:.85;max-width:380px">A web-based point-of-sale and inventory management system for your pet shop.</p>
+    <ul><li>Sell at the counter and print receipts</li><li>Track stock, batches, and expiry dates</li><li>Get low stock and expiry notifications</li></ul></div>
+    <small style="opacity:.8">PetFeed: A Web-Based Point-of-Sale and Inventory Management System</small></div>
+    <div class="right"><div class="box"><div class="card" ${enter('doLogin')}><h1>Welcome back</h1><p class="mut">Log in to your PetFeed account.</p>
+    ${field('lu','Username','text','Enter your username')}
+    <div style="position:relative">${field('lp','Password','password','Enter your password')}<button class="eye" type="button" aria-label="Show or hide password" onclick="toggleEye('lp')">${EYE}</button></div>
+    <p style="text-align:right;margin:8px 0 0"><a href="#/forgot">Forgot password?</a></p>${noteBox()}
+    <button class="btn full" onclick="doLogin()">Log in</button>
+    <p class="hint" style="text-align:center;margin-top:16px">Accounts are created by the shop Owner. Ask the Owner if you need access or a password reset.</p></div>${resetLink}</div></div></div>`;
+}
+async function doLogin(){
+  if (limited('login')) return say('Too many attempts. Please wait one minute and try again.');
+  const un = f('lu').trim().toLowerCase(), user = db.users.find(x => x.username.toLowerCase() === un);
+  const good = user && await checkHash(f('lp'), user.password_hash);
+  if (!good) { failed('login'); return say('Incorrect username or password.'); }   // same message either way
+  if (user.status !== 'ACTIVE') return say('This account is disabled. Ask the Owner for help.');
+  delete tries.login; user.last_login = Date.now(); DB.save(db); setSession(user.id);
+  location.hash = '#/'; route();
+}
+
+let recov = null;                                                  // Owner id after the recovery code was verified
+function forgotPage(){
+  recov = null; window.__enter = verifyCode;
+  $('#app').innerHTML = authPage(`<h1>Forgot your password?</h1><p class="mut">Choose the option that matches your account.</p>
+    <div class="staffbox"><b>I am Staff</b><p class="mut">Ask the Owner to reset your password. You will be asked to choose a new one when you log in.</p></div>
+    <hr style="border:0;border-top:1px solid var(--line)"><b>I am the Owner</b>${field('fu','Username','text','Enter your username')}
+    ${field('fc','Recovery code','text','Enter your recovery code')}<p class="hint">Keep your recovery code somewhere safe. Only the Owner should have it.</p>${noteBox()}
+    <button class="btn full" onclick="verifyCode()">Verify code</button><p style="text-align:center;margin:16px 0 0"><a href="#/">Back to login</a></p>`);
+}
+async function verifyCode(){
+  if (limited('recovery')) return say('Too many attempts. Please wait one minute and try again.');
+  const un = f('fu').trim().toLowerCase(), u = db.users.find(x => x.username.toLowerCase() === un && x.role === 'OWNER');
+  if (!u || !u.recovery_hash || !(await checkHash(cleanCode(f('fc')), u.recovery_hash))) { failed('recovery'); return say('The username or recovery code is incorrect.'); }
+  recov = u.id; window.__enter = saveRecovered;
+  $('#app').innerHTML = authPage(`<h1>Set a new password</h1>${field('np','New password','password','Enter a new password')}<p class="hint">At least 8 characters.</p>
+    ${field('nc','Confirm new password','password','Enter the new password again')}${noteBox()}<button class="btn full" onclick="saveRecovered()">Save and continue</button>`);
+}
+async function saveRecovered(){
+  const u = db.users.find(x => x.id === recov); if (!u) return forgotPage();
+  if (f('np').length < 8) return say('Password must be at least 8 characters.');
+  if (f('np') !== f('nc')) return say('The passwords do not match.');
+  const code = newCode();                                          // a NEW recovery code replaces the old one
+  u.password_hash = await makeHash(f('np')); u.recovery_hash = await makeHash(cleanCode(code)); u.must_change = false; DB.save(db); recov = null;
+  codePage(code, () => { location.hash = '#/'; route(); });
+}
+
+function forcedPage(){
+  window.__enter = saveForced;
+  $('#app').innerHTML = authPage(`<div class="banner">The Owner set a temporary password for your account. Choose a new password to continue.</div>
+    <h1>Set a new password</h1>${field('np','New password','password','Enter a new password')}<p class="hint">At least 8 characters. It cannot be the temporary password.</p>
+    ${field('nc','Confirm new password','password','Enter the new password again')}${noteBox()}
+    <button class="btn full" onclick="saveForced()">Save and continue</button><p style="text-align:center;margin:16px 0 0"><a href="#" onclick="logout();return false">Log out</a></p>`);
+}
+async function saveForced(){
+  const p = f('np');
+  if (p.length < 8) return say('Password must be at least 8 characters.');
+  if (p !== f('nc')) return say('The passwords do not match.');
+  if (await checkHash(p, me.password_hash)) return say('Choose a different password than the temporary one.');
+  me.password_hash = await makeHash(p); me.must_change = false; DB.save(db); route();
+}
+
+/* ===== 8. PAGES INSIDE THE APP ===== */
+const PAGES = {
+  dashboard: soon('Dashboard', 'M4'), sell: soon('Sell (POS)', 'M3'), history: soon('Sales History', 'M3'),
+  inventory: soon('Inventory', 'M2'), notifications: soon('Notifications', 'M4'),
+
+  /* Change Password: everyone, own password only */
+  password(){
+    $('#main').innerHTML = `<div class="form"><h1>Change password</h1><p class="mut">Available to everyone who logs in, Owner and Staff.</p>
+      <div class="card" style="margin-top:16px" ${enter('changePw')}>${field('cp','Current password','password','Enter your current password')}${field('np','New password','password','Enter a new password')}
+      <p class="hint">At least 8 characters.</p>${field('nc','Confirm new password','password','Enter the new password again')}${noteBox()}
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn alt" onclick="history.back()">Cancel</button><button class="btn" onclick="changePw()">Update password</button></div></div></div>`;
+  },
+
+  /* User Management (Owner only) */
+  users(){
+    const rows = db.users.map(u => `<tr class="row ${u.id===selU?'sel':''}" onclick="selU=${u.id};adding=false;PAGES.users()"><td><b>${esc(u.username)}</b></td><td>${cap(u.role)}</td>
+      <td><span class="pill ${u.status==='ACTIVE'?'g':''}">${u.status==='ACTIVE'?'Active':'Disabled'}</span></td><td>${u.last_login?fmt(u.last_login):'Never'}</td></tr>`).join('');
+    const u = db.users.find(x => x.id === selU);
+    let side = '';
+    if (adding) side = `<div class="card form-side" ${enter('createStaff')}><h2>Add staff account</h2><p class="hint">Only the Owner can create staff accounts.</p>${field('an','Full name','text','Enter the full name')}${field('au','Username','text','Enter a username')}
+      ${field('ap','Temporary password','text','Enter a temporary password')}<p class="hint">The staff member will be asked to choose a new password the first time they log in.</p>
+      <label>Role</label><input value="Staff" disabled>${noteBox()}<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px"><button class="btn alt" onclick="adding=false;PAGES.users()">Cancel</button><button class="btn" onclick="createStaff()">Create account</button></div></div>`;
+    else if (u) side = `<div class="card"><h2>${esc(u.username)}</h2><p class="mut">${esc(u.full_name)} · Account details</p><hr style="border:0;border-top:1px solid var(--line)">
+      <div class="kv"><span>Role</span><b>${cap(u.role)}</b></div><div class="kv"><span>Status</span><b>${cap(u.status)}</b></div>
+      <div class="kv"><span>Created</span><b>${fmt(u.created)}</b></div><div class="kv"><span>Last login</span><b>${u.last_login?fmt(u.last_login):'Never'}</b></div>
+      ${u.role==='STAFF' ? `<hr style="border:0;border-top:1px solid var(--line)"><h2 style="margin-top:12px">Reset password</h2>${field('rp','New temporary password','text','Enter a new password')}${noteBox()}
+        <button class="btn full" style="margin-top:6px" onclick="resetPw(${u.id})">Reset password</button>` : noteBox()}
+      ${u.id!==me.id ? `<button class="btn danger full" onclick="toggleUser(${u.id})">${u.status==='ACTIVE'?'Disable account':'Enable account'}</button>` : '<p class="hint">You cannot disable your own account.</p>'}</div>`;
+    $('#main').innerHTML = `<div class="two"><section><div class="hd"><div><h1>User Management</h1><p class="mut">Only the Owner can create, disable, and reset staff accounts.</p></div>
+      <button class="btn" onclick="adding=true;PAGES.users()">Add staff account</button></div>
+      <div class="card tbl"><table><thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Last login</th></tr></thead><tbody>${rows}</tbody></table></div></section><section>${side}</section></div>`;
+  },
+
+  /* Settings (Owner only) */
+  settings(){
+    const s = db.settings;
+    $('#main').innerHTML = `<div class="form"><h1>Settings</h1><p class="mut">Shop details and alert rules for PetFeed.</p>
+      <div class="card" style="margin-top:16px"><h2>Shop information</h2><p class="hint">Shown at the top of printed receipts.</p>
+      ${field('ss','Shop name','text','Enter the shop name')}${field('sa','Address','text','Enter the shop address')}${field('sc','Contact number','text','Enter a contact number')}</div>
+      <div class="card" style="margin-top:16px"><h2>Alert rules</h2><p class="hint">Controls when items appear under Notifications.</p>${field('sd','Expiry alert days','number')}
+      <p class="hint">Items expiring within this many days are shown as Expiring soon.</p></div>${noteBox()}
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px"><button class="btn alt" onclick="PAGES.settings()">Cancel</button><button class="btn" onclick="saveSettings()">Save changes</button></div></div>`;
+    $('#ss').value = s.shop_name; $('#sa').value = s.shop_address; $('#sc').value = s.shop_contact; $('#sd').value = s.expiry_alert_days;
+  }
+};
+
+/* ===== 9. ACTIONS (each one checks permission first, then validates) ===== */
+let selU = null, adding = false;
+
+async function changePw(){
+  if (!(await checkHash(f('cp'), me.password_hash))) return say('Your current password is incorrect.');
+  if (f('np').length < 8) return say('New password must be at least 8 characters.');
+  if (f('np') !== f('nc')) return say('The new passwords do not match.');
+  me.password_hash = await makeHash(f('np')); DB.save(db); say('Password updated.', true);
+  ['cp','np','nc'].forEach(i => $('#' + i).value = '');
+}
+async function createStaff(){
+  need('OWNER');
+  const name = f('an').trim(), un = f('au').trim(), pw = f('ap');
+  if (!name || !un) return say('Full name and username are required.');
+  if (!/^[A-Za-z0-9._-]{3,20}$/.test(un)) return say('Username: 3 to 20 letters, numbers, dot, dash or underscore.');
+  if (db.users.some(x => x.username.toLowerCase() === un.toLowerCase())) return say('That username is already taken.');
+  if (pw.length < 8) return say('Temporary password must be at least 8 characters.');
+  const u = {id:db.nextId++, full_name:name, username:un, password_hash:await makeHash(pw), role:'STAFF', status:'ACTIVE',
+    must_change:true, recovery_hash:null, last_login:null, created:Date.now()};
+  db.users.push(u); DB.save(db); selU = u.id; adding = false; PAGES.users();
+}
+async function resetPw(id){
+  need('OWNER');
+  const u = db.users.find(x => x.id === id), pw = f('rp');
+  if (!u || u.role !== 'STAFF') return;                            // Owner changes their own password via Change Password
+  if (pw.length < 8) return say('Temporary password must be at least 8 characters.');
+  u.password_hash = await makeHash(pw); u.must_change = true; DB.save(db);
+  say('Password reset. ' + u.username + ' must choose a new one at next login.', true); $('#rp').value = '';
+}
+function toggleUser(id){
+  need('OWNER');
+  const u = db.users.find(x => x.id === id);
+  if (!u || u.id === me.id) return;                                // Owner cannot disable themselves
+  u.status = u.status === 'ACTIVE' ? 'DISABLED' : 'ACTIVE'; DB.save(db); PAGES.users();
+}
+function saveSettings(){
+  need('OWNER');
+  const days = Number(f('sd'));
+  if (!Number.isInteger(days) || days < 1 || days > 365) return say('Expiry alert days must be a whole number from 1 to 365.');
+  db.settings = {shop_name:f('ss').trim(), shop_address:f('sa').trim(), shop_contact:f('sc').trim(), expiry_alert_days:days};
+  DB.save(db); say('Settings saved.', true);
+}
+
+/* ===== 10. START ===== */
+route();
+</script>
+</body>
+</html>
