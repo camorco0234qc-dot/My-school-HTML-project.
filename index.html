@@ -30,7 +30,11 @@ input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(-
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px}
 .note{min-height:20px;margin:12px 0 0;font-weight:700;font-size:14px}.note.err{color:var(--red)}.note.ok{color:var(--grn)}
 .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:800;background:var(--gry)}
-.pill.g{background:var(--grnbg);color:var(--grn)}
+.pill.g{background:var(--grnbg);color:var(--grn)}.pill.a{background:var(--ambbg);color:var(--amb)}.pill.r{background:var(--redbg);color:var(--red)}.pill.x{background:var(--red);color:#fff}
+.tabs{display:flex;gap:22px;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}.tabs a{color:var(--mut);padding:10px 2px;border-bottom:3px solid transparent}.tabs a.on{color:var(--teal);border-color:var(--teal)}
+.tag{background:var(--gry);border-radius:99px;padding:2px 8px;font-size:11px;color:var(--ink)}
+.filters{display:grid;grid-template-columns:1fr 200px 200px;gap:10px;margin-bottom:14px}.bat{display:flex;justify-content:space-between;gap:8px;background:var(--bg);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px}
+@media (max-width:860px){.filters{grid-template-columns:1fr}}
 .lg{display:inline-flex;width:42px;height:42px;border-radius:12px;background:var(--orange);align-items:center;justify-content:center}
 .brand{display:flex;align-items:center;gap:12px;font-size:24px;font-weight:800}
 /* Login: split layout */
@@ -62,6 +66,15 @@ th{text-align:left;color:var(--mut);font-size:13px;padding:12px 16px;border-bott
 td{padding:14px 16px;border-bottom:1px solid var(--line)}tr.row{cursor:pointer}tr.sel td{background:var(--sel)}
 .kv{display:flex;justify-content:space-between;padding:7px 0}.kv span{color:var(--mut)}
 .form{max-width:640px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:8px 16px;font:inherit;font-weight:700;cursor:pointer}.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}.pc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;text-align:left;font:inherit;color:var(--ink)}.pc:hover{border-color:var(--teal)}.pc[disabled]{opacity:.55;cursor:not-allowed}.pc small{color:var(--mut);font-weight:700}.pc b{display:block;margin:4px 0 6px}.pc .pr{color:var(--teal);font-size:20px;font-weight:800}
+.ln{display:grid;grid-template-columns:1fr auto 84px;gap:10px;align-items:center;padding:10px 0}.qty{display:flex;align-items:center;gap:8px}.qty button{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:18px;cursor:pointer}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}.seg button{padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:800;cursor:pointer}.seg button.on{background:var(--teal);color:#fff;border-color:var(--teal)}
+.chg{background:var(--sel);border-radius:12px;padding:12px;display:flex;justify-content:space-between;font-weight:800;margin-top:10px}
+.rcpt{background:#fff;color:#000;width:300px;max-width:100%;padding:22px 18px;border:1px solid #ccc;font-family:"Courier New",monospace;font-size:13px}.rcpt .r{display:flex;justify-content:space-between;gap:8px}.rcpt hr{border:0;border-top:1px dashed #000;margin:10px 0}
+.cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}.cards3 b{display:block;font-size:24px;margin-top:4px}
+.two.sellg{grid-template-columns:1fr 360px}
+@media (max-width:860px){.two.sellg{grid-template-columns:1fr}.cards3{grid-template-columns:1fr}}
 @media (max-width:860px){
  .split{grid-template-columns:1fr}.split .left{display:none}
  .shell{grid-template-columns:1fr}
@@ -70,7 +83,7 @@ td{padding:14px 16px;border-bottom:1px solid var(--line)}tr.row{cursor:pointer}t
  aside .foot{display:flex;flex-wrap:wrap;align-items:center;order:2;margin-left:auto}aside .foot a{margin:0}
  .two{grid-template-columns:1fr}main{padding:16px}
 }
-@media print{body *{visibility:hidden}.code,.code *{visibility:visible}.code{position:absolute;top:20px;left:0;right:0}}
+@media print{body *{visibility:hidden}.code,.code *,.rcpt,.rcpt *{visibility:visible}.code{position:absolute;top:20px;left:0;right:0}.rcpt{position:absolute;top:0;left:0;width:80mm;border:0}}
 </style>
 </head>
 <body>
@@ -94,8 +107,12 @@ const store = {
   set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){ mem[k] = v; } }
 };
 const DB = {
-  load(){ return store.get('pf_db') || {users:[], nextId:1,
-    settings:{shop_name:'', shop_address:'', shop_contact:'', expiry_alert_days:30}}; },
+  load(){
+    const d = store.get('pf_db') || {users:[], nextId:1, settings:{shop_name:'', shop_address:'', shop_contact:'', expiry_alert_days:30}};
+    d.products = d.products || []; d.batches = d.batches || []; d.movements = d.movements || [];   // M2 tables
+    d.nextProd = d.nextProd || 1; d.nextBatch = d.nextBatch || 1;
+    d.sales = d.sales || []; d.nextSale = d.nextSale || 1; return d;                          // M3 tables
+  },
   save(d){ store.set('pf_db', d); }
 };
 let db = DB.load();
@@ -169,6 +186,7 @@ function route(){
 window.addEventListener('hashchange', route);
 
 function shell(r){
+  rcptSale = null;                                                 // leaving a screen closes any open receipt
   const links = NAV.filter(n => n.roles.includes(me.role)).map(n => `<a href="#/${n.id}" class="${r===n.id?'on':''}">${n.label}</a>`).join('');
   $('#app').innerHTML = `<div class="shell"><aside><div class="brand">${LOGO}PetFeed</div><nav>${links}</nav>
     <div class="foot"><span>Logged in as ${cap(me.role)}</span><a href="#/password" class="${r==='password'?'on':''}">Change Password</a><a href="#" onclick="logout();return false">Logout</a></div></aside><main id="main"></main></div>`;
@@ -271,8 +289,8 @@ async function saveForced(){
 
 /* ===== 8. PAGES INSIDE THE APP ===== */
 const PAGES = {
-  dashboard: soon('Dashboard', 'M4'), sell: soon('Sell (POS)', 'M3'), history: soon('Sales History', 'M3'),
-  inventory: soon('Inventory', 'M2'), notifications: soon('Notifications', 'M4'),
+  dashboard: soon('Dashboard', 'M4'), sell: () => sellPage(), history: () => historyPage(),
+  inventory: () => inventoryPage(), notifications: soon('Notifications', 'M4'),
 
   /* Change Password: everyone, own password only */
   password(){
@@ -356,6 +374,297 @@ function saveSettings(){
   if (!Number.isInteger(days) || days < 1 || days > 365) return say('Expiry alert days must be a whole number from 1 to 365.');
   db.settings = {shop_name:f('ss').trim(), shop_address:f('sa').trim(), shop_contact:f('sc').trim(), expiry_alert_days:days};
   DB.save(db); say('Settings saved.', true);
+}
+
+/* ===== 9b. INVENTORY (M2) ===== */
+const CATS = ['Pet Food','Accessories and Toys','Grooming and Health','Pet Supplies'];
+const peso = n => '₱' + Number(n).toLocaleString('en-PH', {minimumFractionDigits:2, maximumFractionDigits:2});
+const todayStr = () => new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Manila'});            // YYYY-MM-DD, Manila
+const dayDiff = d => Math.round((Date.parse(d + 'T00:00:00Z') - Date.parse(todayStr() + 'T00:00:00Z')) / 864e5);
+const dfmt = d => d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', {timeZone:'UTC', month:'short', day:'numeric', year:'numeric'}) : 'None';
+const isExp = b => !!b.expiry && dayDiff(b.expiry) < 0;                                        // expired = date is before today
+const SPILL = {'In stock':'g', 'Low stock':'a', 'Expiring soon':'r', 'Expired':'x', 'Out of stock':''};
+
+/* Stock numbers + status for one product. Order of rules: Out of stock, Expired, Expiring soon, Low stock, In stock.
+   'Expired' shows only when there is still SELLABLE stock next to an expired batch. */
+function stockInfo(p){
+  const bs = db.batches.filter(b => b.product_id === p.id && b.qty > 0), ok = bs.filter(b => !isExp(b));
+  const sum = a => a.reduce((s, b) => s + b.qty, 0), total = sum(bs), sellable = sum(ok);
+  const soon = ok.some(b => b.expiry && dayDiff(b.expiry) <= db.settings.expiry_alert_days);
+  const nearest = bs.filter(b => b.expiry).map(b => b.expiry).sort()[0] || null;
+  const status = sellable === 0 ? 'Out of stock' : bs.some(isExp) ? 'Expired' : soon ? 'Expiring soon' : sellable <= p.low_level ? 'Low stock' : 'In stock';
+  return {bs, total, sellable, nearest, status};
+}
+function logMove(pid, bid, type, qty, reason, note){
+  db.movements.push({id:db.movements.length + 1, product_id:pid, batch_id:bid, type, qty, reason:reason || '', note:note || '', user_id:me.id, at:Date.now()});
+}
+/* Take stock out, earliest expiry first (FEFO). M3 will reuse this for sales. */
+function deduct(p, qty, type, reason, note, sellableOnly){
+  let left = qty;
+  const bs = db.batches.filter(b => b.product_id === p.id && b.qty > 0 && (!sellableOnly || !isExp(b)))
+    .sort((a, b) => (a.expiry || '9999').localeCompare(b.expiry || '9999') || a.id - b.id);
+  for (const b of bs){ if (!left) break; const t = Math.min(left, b.qty); b.qty -= t; left -= t; logMove(p.id, b.id, type, -t, reason, note); }
+}
+
+let invTab = 'list', invSel = null, invForm = null, invQ = '', invCat = '', invStat = '', expF = 'all', adjPre = null;
+function inventoryPage(){
+  const own = me.role === 'OWNER';
+  if (!own && (invTab === 'stockin' || invTab === 'adjust')) invTab = 'list';                   // Staff: no stock changes
+  const tabs = [['list','Product List'], ...(own ? [['stockin','Stock In'], ['adjust','Stock Adjustment']] : []), ['expiry','Expiry Tracking']];
+  $('#main').innerHTML = `<div class="hd"><h1>Inventory</h1>${own && invTab === 'list' && !invForm ? '<button class="btn" onclick="invForm=\'add\';inventoryPage()">Add product</button>' : ''}</div>
+    <div class="tabs">${tabs.map(([k, l]) => `<a href="#" class="${invTab===k?'on':''}" onclick="invTab='${k}';invForm=null;inventoryPage();return false">${l}${k==='stockin'?' <span class="tag">Owner only</span>':''}</a>`).join('')}</div><div id="tab"></div>`;
+  ({list:tabList, stockin:tabStockIn, adjust:tabAdjust, expiry:tabExpiry})[invTab]();
+}
+const prodOptions = sel => db.products.map(p => `<option value="${p.id}" ${p.id===sel?'selected':''}>${esc(p.name)}</option>`).join('');
+
+/* --- Product List --- */
+function tabList(){
+  if (invForm) return productForm();
+  $('#tab').innerHTML = `<div class="two"><section><div class="filters"><input id="fq" placeholder="Search product name" value="${esc(invQ)}" oninput="invQ=this.value;drawList()">
+    <select id="fc" onchange="invCat=this.value;drawList()"><option value="">All categories</option>${CATS.map(c => `<option ${c===invCat?'selected':''}>${c}</option>`).join('')}</select>
+    <select id="fs" onchange="invStat=this.value;drawList()"><option value="">All stock status</option>${Object.keys(SPILL).map(s => `<option ${s===invStat?'selected':''}>${s}</option>`).join('')}</select></div>
+    <div id="plist" class="card tbl"></div></section><section id="pside"></section></div>`;
+  drawList();
+}
+function drawList(){
+  const own = me.role === 'OWNER';
+  const rows = db.products.map(p => ({p, i:stockInfo(p)})).filter(({p, i}) => (!invQ || p.name.toLowerCase().includes(invQ.toLowerCase())) && (!invCat || p.category === invCat) && (!invStat || i.status === invStat));
+  $('#plist').innerHTML = !db.products.length
+    ? `<div style="padding:24px"><p class="mut">No products yet.${own ? ' Add your first product, or load sample data to try the prototype.' : ' Ask the Owner to add products.'}</p>${own ? '<button class="btn alt" onclick="loadSample()">Load sample data</button>' : ''}</div>`
+    : !rows.length ? '<p class="mut" style="padding:24px">No products match these filters.</p>'
+    : `<table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Nearest expiry</th><th>Status</th></tr></thead><tbody>${rows.map(({p, i}) =>
+      `<tr class="row ${p.id===invSel?'sel':''}" onclick="invSel=${p.id};drawList()"><td><b>${esc(p.name)}</b></td><td>${p.category}</td><td>${peso(p.price)}</td><td>${i.total}</td><td>${dfmt(i.nearest)}</td><td><span class="pill ${SPILL[i.status]}">${i.status}</span></td></tr>`).join('')}</tbody></table>`;
+  const p = db.products.find(x => x.id === invSel), i = p && stockInfo(p);
+  $('#pside').innerHTML = !p ? '' : `<div class="card"><h2>${esc(p.name)}</h2><p class="mut">Product details</p><hr style="border:0;border-top:1px solid var(--line)">
+    <div class="kv"><span>Category</span><b>${p.category}</b></div><div class="kv"><span>Price</span><b>${peso(p.price)}</b></div><div class="kv"><span>In stock</span><b>${i.total} units</b></div>
+    ${i.sellable !== i.total ? `<div class="kv"><span>Sellable</span><b>${i.sellable} units</b></div>` : ''}<div class="kv"><span>Low stock level</span><b>${p.low_level} units</b></div>
+    ${p.barcode ? `<div class="kv"><span>Barcode</span><b>${esc(p.barcode)}</b></div>` : ''}<h2 style="margin-top:16px">Batches</h2>
+    ${i.bs.length ? i.bs.sort((a, b) => (a.expiry || '9999').localeCompare(b.expiry || '9999')).map(b => `<div class="bat"><span><b>Batch ${esc(b.batch_no)}</b> · ${b.qty} units</span><span>${b.expiry ? (isExp(b) ? '<b style="color:var(--red)">Expired ' : 'Exp. ') + dfmt(b.expiry) + (isExp(b) ? '</b>' : '') : 'No expiry'}</span></div>`).join('') : '<p class="mut">No stock on hand.</p>'}
+    ${own ? `<button class="btn full" onclick="invForm=${p.id};inventoryPage()">Edit product</button><button class="btn alt full" onclick="adjPre=${p.id};invTab='adjust';inventoryPage()">Adjust stock</button>` : ''}</div>`;
+}
+function productForm(){
+  const p = typeof invForm === 'number' ? db.products.find(x => x.id === invForm) : null;
+  $('#tab').innerHTML = `<div class="form"><h1>${p ? 'Edit product' : 'Add product'}</h1><p class="mut">Edit product uses this same form with the product's current details filled in.</p>
+    <div class="card" style="margin-top:14px" ${enter('saveProduct')}>${field('pn','Product name','text','Enter the product name')}
+    <label for="pc">Category</label><select id="pc">${CATS.map(c => `<option ${p && p.category===c?'selected':''}>${c}</option>`).join('')}</select>
+    ${field('pr','Price (₱)','number','0.00')}${field('pl','Low stock level (units)','number','5')}<p class="hint">You get a notification when stock falls to this level.</p>
+    ${field('pb','Barcode (optional)','text','Scan or type the barcode')}${noteBox()}
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn alt" onclick="invForm=null;inventoryPage()">Cancel</button><button class="btn" onclick="saveProduct()">Save product</button></div></div></div>`;
+  $('#pn').value = p ? p.name : ''; $('#pr').value = p ? p.price : ''; $('#pl').value = p ? p.low_level : 5; $('#pb').value = p ? p.barcode : '';
+}
+function saveProduct(){
+  need('OWNER');
+  const id = typeof invForm === 'number' ? invForm : null, name = f('pn').trim(), price = Number(f('pr')), low = Number(f('pl')), bc = f('pb').trim();
+  if (!name) return say('Product name is required.');
+  if (db.products.some(x => x.id !== id && x.name.toLowerCase() === name.toLowerCase())) return say('A product with this name already exists.');
+  if (!(price > 0)) return say('Price must be more than 0.');
+  if (!Number.isInteger(low) || low < 0) return say('Low stock level must be a whole number, 0 or more.');
+  if (bc && db.products.some(x => x.id !== id && x.barcode === bc)) return say('That barcode is already used by another product.');
+  const d = {name, category:f('pc'), price:Math.round(price * 100) / 100, low_level:low, barcode:bc};
+  if (id) Object.assign(db.products.find(x => x.id === id), d);
+  else { const p = {id:db.nextProd++, ...d}; db.products.push(p); invSel = p.id; }
+  DB.save(db); invForm = null; inventoryPage();
+}
+
+/* --- Stock In (new batch) --- */
+function tabStockIn(){
+  $('#tab').innerHTML = !db.products.length ? '<p class="mut">Add a product first, then record its stock here.</p>' : `<div class="form"><h1>Stock In</h1><p class="mut">Record a new batch of stock for a product.</p>
+    <div class="card" style="margin-top:14px" ${enter('doStockIn')}><label for="sp">Product</label><select id="sp">${prodOptions()}</select>${field('sb','Batch number','text','Enter the batch number')}
+    ${field('sq','Quantity received (units)','number','0')}<label for="se">Expiry date</label><input id="se" type="date"><p class="hint">Leave blank for products that do not expire.</p>${noteBox()}
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px"><button class="btn alt" onclick="inventoryPage()">Cancel</button><button class="btn" onclick="doStockIn()">Add stock</button></div></div></div>`;
+}
+function doStockIn(){
+  need('OWNER');
+  const p = db.products.find(x => x.id === Number(f('sp'))), bn = f('sb').trim(), q = Number(f('sq')), ex = f('se');
+  if (!p) return say('Choose a product.');
+  if (!bn) return say('Batch number is required.');
+  if (db.batches.some(b => b.product_id === p.id && b.batch_no.toLowerCase() === bn.toLowerCase())) return say('This product already has a batch with that number.');
+  if (!Number.isInteger(q) || q < 1) return say('Quantity must be a whole number, 1 or more.');
+  if (ex && ex < todayStr()) return say('Expiry date cannot be in the past.');
+  const b = {id:db.nextBatch++, product_id:p.id, batch_no:bn, qty:q, expiry:ex || null, created:Date.now()};
+  db.batches.push(b); logMove(p.id, b.id, 'STOCK_IN', q, 'Stock in', ''); DB.save(db);
+  ['sb','sq','se'].forEach(i => $('#' + i).value = ''); say(`Added ${q} units of ${p.name} (batch ${bn}).`, true);
+}
+
+/* --- Stock Adjustment (damage and corrections) --- */
+function tabAdjust(){
+  const recent = db.movements.filter(m => m.type === 'ADJUST').slice(-8).reverse();
+  $('#tab').innerHTML = !db.products.length ? '<p class="mut">Add a product first.</p>' : `<h1>Stock Adjustment</h1><p class="mut">For damage and corrections. Expired stock is written off under Expiry Tracking.</p>
+    <div class="two" style="grid-template-columns:minmax(0,400px) 1fr;margin-top:14px"><div class="card" ${enter('doAdjust')}><label for="jp">Product</label><select id="jp">${prodOptions(adjPre)}</select>
+    <label for="jr">Reason</label><select id="jr"><option>Damaged</option><option>Lost</option><option>Counting correction</option><option>Other</option></select>
+    ${field('jq','Quantity change','number','-1')}<p class="hint">Use a minus number to remove stock and a plus number to add stock.</p>${field('jn','Note (optional)','text','Add a short note')}${noteBox()}
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px"><button class="btn alt" onclick="inventoryPage()">Cancel</button><button class="btn" onclick="doAdjust()">Save adjustment</button></div></div>
+    <div><h2>Recent adjustments</h2><div class="card tbl"><table><thead><tr><th>Date</th><th>Product</th><th>Change</th><th>Reason</th></tr></thead><tbody>${recent.length ? recent.map(m => {
+      const p = db.products.find(x => x.id === m.product_id); return `<tr><td><b>${new Date(m.at).toLocaleDateString('en-US', {timeZone:'Asia/Manila', month:'short', day:'numeric'})}</b></td><td>${esc(p ? p.name : '')}</td><td>${m.qty > 0 ? '+' : '−'}${Math.abs(m.qty)}</td><td>${esc(m.reason)}</td></tr>`; }).join('') : '<tr><td colspan="4" class="mut">No adjustments yet.</td></tr>'}</tbody></table></div></div></div>`;
+  adjPre = null;
+}
+function doAdjust(){
+  need('OWNER');
+  const p = db.products.find(x => x.id === Number(f('jp'))), q = Number(f('jq')), r = f('jr'), n = f('jn').trim();
+  if (!p) return say('Choose a product.');
+  if (!Number.isInteger(q) || q === 0) return say('Enter a whole number that is not 0, like -1 or 2.');
+  if (r === 'Other' && !n) return say('Add a short note when the reason is Other.');
+  if (q < 0){                                                      // remove stock: earliest expiry first, never below 0
+    const total = stockInfo(p).total;
+    if (-q > total) return say(`You cannot remove more than the ${total} units in stock.`);
+    deduct(p, -q, 'ADJUST', r, n, false);
+  } else {                                                         // add stock: goes onto the newest batch
+    let b = db.batches.filter(x => x.product_id === p.id).sort((a, c) => c.id - a.id)[0];
+    if (!b){ b = {id:db.nextBatch++, product_id:p.id, batch_no:'ADJ-' + p.id, qty:0, expiry:null, created:Date.now()}; db.batches.push(b); }
+    b.qty += q; logMove(p.id, b.id, 'ADJUST', q, r, n);
+  }
+  DB.save(db); inventoryPage();
+}
+
+/* --- Expiry Tracking + write-off --- */
+function tabExpiry(){
+  const own = me.role === 'OWNER', al = db.settings.expiry_alert_days;
+  const rows = db.batches.filter(b => b.qty > 0 && b.expiry).map(b => ({b, p:db.products.find(x => x.id === b.product_id), d:dayDiff(b.expiry)})).sort((a, c) => a.b.expiry.localeCompare(c.b.expiry));
+  const ex = rows.filter(r => r.d < 0), soon = rows.filter(r => r.d >= 0 && r.d <= al), shown = expF === 'exp' ? ex : expF === 'soon' ? soon : rows;
+  const chip = (k, l) => `<button class="btn ${expF===k?'':'alt'}" style="padding:8px 14px" onclick="expF='${k}';tabExpiry()">${l}</button>`;
+  $('#tab').innerHTML = `<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">${chip('all','All batches')}${chip('exp',`Expired (${ex.length})`)}${chip('soon',`Expiring soon (${soon.length})`)}</div>
+    <div class="card tbl"><table><thead><tr><th>Product</th><th>Batch</th><th>Units</th><th>Expiry date</th><th>Status</th><th>Action</th></tr></thead><tbody>${shown.length ? shown.map(({b, p, d}) =>
+    `<tr><td><b>${esc(p ? p.name : '')}</b></td><td>${esc(b.batch_no)}</td><td>${b.qty}</td><td>${dfmt(b.expiry)}</td><td>${d < 0 ? '<span class="pill x">Expired</span>' : d <= al ? `<span class="pill r">Expiring soon</span> ${d} days` : `<span class="pill g">OK</span> ${d} days`}</td>
+    <td>${d < 0 && own ? `<button class="btn danger" style="padding:8px 14px" onclick="writeOff(${b.id})">Write off stock</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="6" class="mut">No batches to show.</td></tr>'}</tbody></table></div>`;
+}
+function writeOff(id){
+  need('OWNER');
+  const b = db.batches.find(x => x.id === id);
+  if (!b || !isExp(b) || b.qty < 1) return;                        // only expired batches can be written off
+  const p = db.products.find(x => x.id === b.product_id);
+  if (!confirm(`Write off ${b.qty} units of ${p.name} (batch ${b.batch_no})? This cannot be undone.`)) return;
+  logMove(p.id, b.id, 'WRITE_OFF', -b.qty, 'Expired', ''); b.qty = 0; DB.save(db); tabExpiry();
+}
+
+/* --- Sample data (Owner, only when there are no products): the items from the mockup --- */
+function loadSample(){
+  need('OWNER'); if (db.products.length) return;
+  const S = [['Dog Food 1kg',0,185,5,[['B-101',14,'2026-11-30'],['B-102',10,'2027-03-15']]], ['Cat Food Pouch',0,32,10,[['B-095',60,'2027-01-12']]], ['Chew Toy',1,95,5,[['B-001',15]]],
+    ['Cat Litter 5L',3,260,5,[['B-002',9]]], ['Pet Shampoo 250ml',2,140,5,[['B-088',3,'2027-02-02']]], ['Dog Leash',1,120,5,[['B-003',12]]], ['Puppy Food 500g',0,98,5,[['B-090',18,'2026-10-28']]],
+    ['Dog Biscuits 300g',0,75,5,[['B-084',11,'2026-11-04']]], ['Rabbit Pellets 1kg',0,150,5,[['B-077',6,'2026-10-12']]], ['Fish Food 50g',3,45,5,[['B-070',2]]]];
+  S.forEach(([name, c, price, low, bs]) => {
+    const p = {id:db.nextProd++, name, category:CATS[c], price, low_level:low, barcode:''}; db.products.push(p);
+    bs.forEach(([bn, q, ex]) => { const b = {id:db.nextBatch++, product_id:p.id, batch_no:bn, qty:q, expiry:ex || null, created:Date.now()}; db.batches.push(b); logMove(p.id, b.id, 'STOCK_IN', q, 'Sample data', ''); });
+  });
+  DB.save(db); inventoryPage();
+}
+
+/* ===== 9c. SELL (POS), RECEIPTS, SALES HISTORY (M3) ===== */
+let cart = [], sellQ = '', sellCat = '', payM = 'CASH', recvAmt = '', rcptSale = null, rcptBack = 'sell', hPer = 'today', hPay = '', hQ = '', hSel = null;
+const cents = x => Math.round(x * 100), money = c => peso(c / 100);       // money is handled in centavos to avoid rounding errors
+const sellableOf = p => stockInfo(p).sellable;
+const cartTotal = () => cart.reduce((s, l) => { const p = db.products.find(x => x.id === l.pid); return s + (p ? cents(p.price) * l.qty : 0); }, 0);
+
+function sellPage(){
+  if (rcptSale) return receiptPage();
+  $('#main').innerHTML = `<div class="two sellg"><section><div class="hd"><h1>Sell</h1><input id="sq" style="max-width:340px" placeholder="Search product name or scan barcode" value="${esc(sellQ)}" oninput="sellQ=this.value;drawGrid()" onkeydown="if(event.key==='Enter')scanCode()"></div>
+    <div id="chips"></div><div id="grid"></div></section><section id="cart" class="card"></section></div>`;
+  drawGrid(); drawCart();
+}
+function drawGrid(){
+  $('#chips').innerHTML = `<div class="chips">${['', ...CATS].map(c => `<button class="chip ${sellCat===c?'on':''}" onclick="sellCat='${c}';drawGrid()">${c || 'All'}</button>`).join('')}</div>`;
+  const q = sellQ.trim().toLowerCase();
+  const ps = db.products.filter(p => (!sellCat || p.category === sellCat) && (!q || p.name.toLowerCase().includes(q) || (p.barcode && p.barcode === sellQ.trim())));
+  $('#grid').innerHTML = !db.products.length ? '<p class="mut">No products yet. The Owner can add products under Inventory.</p>' : !ps.length ? '<p class="mut">No products match.</p>'
+    : `<div class="grid">${ps.map(p => { const n = sellableOf(p), st = n === 0 ? 'color:var(--red)' : n <= p.low_level ? 'color:var(--amb);font-weight:700' : '';
+      return `<button class="pc" ${n ? '' : 'disabled'} onclick="addCart(${p.id})"><small>${p.category}</small><b>${esc(p.name)}</b><span class="pr">${peso(p.price)}</span><div class="hint" style="${st}">${n === 0 ? 'Out of stock' : n <= p.low_level ? 'Low stock: ' + n + ' left' : n + ' in stock'}</div></button>`; }).join('')}</div>`;
+}
+function scanCode(){                                                     // a barcode scanner types the code and presses Enter
+  const p = db.products.find(x => x.barcode && x.barcode === sellQ.trim());
+  if (p){ addCart(p.id); sellQ = ''; $('#sq').value = ''; drawGrid(); }
+}
+function addCart(pid){
+  const p = db.products.find(x => x.id === pid); if (!p) return;
+  const l = cart.find(x => x.pid === pid);
+  if ((l ? l.qty : 0) >= sellableOf(p)) return;                         // never more than the sellable stock
+  l ? l.qty++ : cart.push({pid, qty:1}); drawCart();
+}
+function qty(pid, d){
+  const l = cart.find(x => x.pid === pid), p = db.products.find(x => x.id === pid); if (!l || !p) return;
+  const n = l.qty + d;
+  if (n < 1) cart = cart.filter(x => x !== l); else if (n <= sellableOf(p)) l.qty = n;
+  drawCart();
+}
+function drawCart(){
+  const rows = cart.map(l => ({l, p:db.products.find(x => x.id === l.pid)})).filter(x => x.p), cash = payM === 'CASH';
+  $('#cart').innerHTML = `<div class="hd" style="margin-bottom:6px"><h2>Current Sale</h2>${cart.length ? '<a href="#" onclick="cart=[];drawCart();return false">Clear cart</a>' : ''}</div>
+    ${rows.length ? rows.map(({l, p}) => `<div class="ln"><div><b>${esc(p.name)}</b><div class="hint">${peso(p.price)} each</div></div><div class="qty"><button aria-label="Remove one" onclick="qty(${p.id},-1)">−</button><b>${l.qty}</b><button aria-label="Add one" onclick="qty(${p.id},1)">+</button></div><b style="text-align:right">${money(cents(p.price) * l.qty)}</b></div>`).join('') : '<p class="mut">Tap a product to add it to the sale.</p>'}
+    <hr style="border:0;border-top:1px solid var(--line)"><div class="kv"><span>Total</span><b style="font-size:28px">${money(cartTotal())}</b></div>
+    <label>Payment method</label><div class="seg"><button class="${cash ? 'on' : ''}" onclick="payM='CASH';drawCart()">Cash</button><button class="${cash ? '' : 'on'}" onclick="payM='DIGITAL';drawCart()">GCash / Card</button></div>
+    ${cash ? `<label for="rc">Amount received</label><input id="rc" type="number" min="0" step="0.01" value="${esc(recvAmt)}" oninput="recvAmt=this.value;drawChange()"><div class="chg"><span>Change</span><span id="chg"></span></div>`
+      : `<label for="pt">Paid with</label><select id="pt"><option>GCash</option><option>Card</option></select>${field('pf', 'Reference number', 'text', 'Enter the reference number')}`}
+    ${noteBox()}<button class="btn full" onclick="completeSale()" ${rows.length ? '' : 'disabled'}>Complete sale and show receipt</button>`;
+  drawChange();
+}
+function drawChange(){
+  const el = $('#chg'); if (!el) return;
+  const d = cents(Number(recvAmt || 0)) - cartTotal(); el.textContent = recvAmt !== '' && d >= 0 ? money(d) : '—';
+}
+function completeSale(){
+  if (!cart.length) return say('Add at least one product.');
+  const lines = []; let total = 0;
+  for (const l of cart){                                                // re-check stock at the moment of sale
+    const p = db.products.find(x => x.id === l.pid); if (!p) return say('A product in the cart no longer exists.');
+    const av = sellableOf(p); if (l.qty > av) return say(`Only ${av} of ${p.name} left in sellable stock. Update the cart.`);
+    lines.push({product_id:p.id, name:p.name, unit_price:p.price, qty:l.qty, line_total:cents(p.price) * l.qty / 100}); total += cents(p.price) * l.qty;
+  }
+  let method = 'Cash', recv = total, ref = '';
+  if (payM === 'CASH'){ recv = cents(Number(f('rc'))); if (f('rc') === '' || recv < total) return say('Amount received must be at least the total.'); }
+  else { method = f('pt'); ref = f('pf').trim(); if (!ref) return say('Enter the GCash or card reference number.'); }
+  const snap = JSON.stringify(db);                                      // all-or-nothing: restore everything if anything fails
+  try {
+    const n = db.nextSale++, sale = {id:n, receipt_no:'R-' + String(n).padStart(6, '0'), at:Date.now(), user_id:me.id, sold_by:me.full_name, items:lines,
+      total:total / 100, method, amount_received:recv / 100, change:(recv - total) / 100, reference:ref};
+    lines.forEach(ln => deduct(db.products.find(x => x.id === ln.product_id), ln.qty, 'SALE', sale.receipt_no, '', true));
+    db.sales.push(sale); DB.save(db); cart = []; recvAmt = ''; rcptSale = sale; rcptBack = 'sell'; sellPage();
+  } catch (e) { db = JSON.parse(snap); DB.save(db); me = db.users.find(u => u.id === me.id); say('The sale failed and nothing was saved. Please try again.'); }
+}
+
+/* --- Receipt (also used for reprints) --- */
+function receiptHTML(s){
+  const st = db.settings, row = (a, b) => `<div class="r"><span>${a}</span><span>${b}</span></div>`;
+  return `<div class="rcpt"><div style="text-align:center"><b style="font-size:15px">${esc(st.shop_name || 'Shop Name')}</b><br>${esc(st.shop_address || 'Shop Address')}<br>${esc(st.shop_contact || 'Contact Number')}</div><hr>
+    ${row('Receipt No.', s.receipt_no)}${row('Date', fmt(s.at))}${row('Sold by', esc(s.sold_by))}<hr>
+    ${s.items.map(i => row(`${esc(i.name)} ${i.qty} x ${i.unit_price.toFixed(2)}`, i.line_total.toFixed(2))).join('')}<hr>
+    <div class="r" style="font-size:15px"><b>TOTAL</b><b>${peso(s.total)}</b></div>${row('Payment', s.method)}
+    ${s.method === 'Cash' ? row('Received', peso(s.amount_received)) + row('Change', peso(s.change)) : row('Reference', esc(s.reference))}<hr><div style="text-align:center">Thank you for shopping!</div></div>`;
+}
+function receiptPage(){
+  const s = rcptSale, back = rcptBack === 'sell';
+  $('#main').innerHTML = `<h1>Receipt</h1><p class="mut">${back ? `Sale ${s.receipt_no} is complete.${s.method === 'Cash' ? ' Change due: ' + peso(s.change) + '.' : ''}` : 'Reprint of sale ' + s.receipt_no + '.'}</p>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;align-items:flex-start">${receiptHTML(s)}<div style="width:300px;max-width:100%"><button class="btn full" style="margin-top:0" onclick="window.print()">Print receipt</button>
+    <button class="btn alt full" onclick="closeReceipt()">${back ? 'New sale' : 'Back to sales history'}</button><p class="hint">The shop name, address, and contact number at the top come from Settings, under Shop information.</p></div></div>`;
+}
+function closeReceipt(){ rcptSale = null; rcptBack === 'sell' ? sellPage() : historyPage(); }
+
+/* --- Sales History (Staff see only their own sales; Owner sees all) --- */
+function historyPage(){
+  if (rcptSale) return receiptPage();
+  $('#main').innerHTML = `<div class="two sellg" style="grid-template-columns:1fr 340px"><section><h1 style="margin-bottom:16px">Sales History</h1><div id="hcards"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px"><input id="hq" style="max-width:200px" placeholder="Search receipt no." value="${esc(hQ)}" oninput="hQ=this.value;drawHist()"><span id="hf" class="chips" style="margin:0"></span></div>
+    <div id="hlist" class="card tbl"></div></section><section id="hside"></section></div>`;
+  drawHist();
+}
+function drawHist(){
+  const own = me.role === 'OWNER', day = t => new Date(t).toLocaleDateString('en-CA', {timeZone:'Asia/Manila'}), today = todayStr();
+  const wk = new Date(today + 'T00:00:00Z'); wk.setUTCDate(wk.getUTCDate() - ((wk.getUTCDay() + 6) % 7)); const weekStart = wk.toISOString().slice(0, 10);   // week starts Monday
+  const mine = db.sales.filter(s => own || s.user_id === me.id).slice().reverse(), sum = a => a.reduce((t, s) => t + cents(s.total), 0);
+  const td = mine.filter(s => day(s.at) === today), cash = td.filter(s => s.method === 'Cash'), dig = td.filter(s => s.method !== 'Cash');
+  const card = (t, a) => `<div class="card"><span class="mut">${t}</span><b>${money(sum(a))}</b><span class="hint">${a.length} transaction${a.length === 1 ? '' : 's'}</span></div>`;
+  $('#hcards').innerHTML = `<div class="cards3">${card('Sales today', td)}${card('Cash', cash)}${card('GCash / Card', dig)}</div>`;
+  $('#hf').innerHTML = [['today','Today'], ['week','This week'], ['month','This month']].map(([k, l]) => `<button class="chip ${hPer===k?'on':''}" onclick="hPer='${k}';drawHist()">${l}</button>`).join('')
+    + `<select style="width:auto" onchange="hPay=this.value;drawHist()"><option value="">All payments</option>${['Cash','GCash','Card'].map(m => `<option ${hPay===m?'selected':''}>${m}</option>`).join('')}</select>`;
+  const rows = mine.filter(s => (hPer === 'today' ? day(s.at) === today : hPer === 'week' ? day(s.at) >= weekStart : day(s.at).slice(0, 7) === today.slice(0, 7))
+    && (!hPay || s.method === hPay) && (!hQ.trim() || s.receipt_no.toLowerCase().includes(hQ.trim().toLowerCase())));
+  $('#hlist').innerHTML = rows.length ? `<table><thead><tr><th>Receipt No.</th><th>Date and time</th><th>Items</th><th>Payment</th><th>Total</th><th></th></tr></thead><tbody>${rows.map(s =>
+    `<tr class="row ${s.id===hSel?'sel':''}" onclick="hSel=${s.id};drawHist()"><td><b>${s.receipt_no}</b></td><td>${fmt(s.at)}</td><td>${s.items.length} item${s.items.length === 1 ? '' : 's'}</td><td>${s.method}</td><td><b>${peso(s.total)}</b></td><td><a href="#" onclick="hSel=${s.id};drawHist();return false">View</a></td></tr>`).join('')}</tbody></table>`
+    : '<p class="mut" style="padding:24px">No sales found for these filters.</p>';
+  const s = mine.find(x => x.id === hSel);
+  $('#hside').innerHTML = !s ? '' : `<div class="card"><h2>Sale ${s.receipt_no}</h2><p class="mut">${fmt(s.at)} · Sold by ${esc(s.sold_by)}</p><hr style="border:0;border-top:1px solid var(--line)">
+    ${s.items.map(i => `<div class="kv"><b>${esc(i.name)} <span class="mut" style="font-weight:400">× ${i.qty}</span></b><b>${peso(i.line_total)}</b></div>`).join('')}<hr style="border:0;border-top:1px solid var(--line)">
+    <div class="kv"><span>Total</span><b>${peso(s.total)}</b></div><div class="kv"><span>Payment</span><b>${s.method}</b></div>
+    ${s.method === 'Cash' ? `<div class="kv"><span>Amount received</span><b>${peso(s.amount_received)}</b></div><div class="kv"><span>Change</span><b>${peso(s.change)}</b></div>` : `<div class="kv"><span>Reference</span><b>${esc(s.reference)}</b></div>`}
+    <button class="btn full" onclick="rcptSale=db.sales.find(x=>x.id===${s.id});rcptBack='history';historyPage()">Reprint receipt</button></div>`;
 }
 
 /* ===== 10. START ===== */
