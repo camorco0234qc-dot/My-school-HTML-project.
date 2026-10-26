@@ -74,6 +74,10 @@ td{padding:14px 16px;border-bottom:1px solid var(--line)}tr.row{cursor:pointer}t
 .rcpt{background:#fff;color:#000;width:300px;max-width:100%;padding:22px 18px;border:1px solid #ccc;font-family:"Courier New",monospace;font-size:13px}.rcpt .r{display:flex;justify-content:space-between;gap:8px}.rcpt hr{border:0;border-top:1px dashed #000;margin:10px 0}
 .cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}.cards3 b{display:block;font-size:24px;margin-top:4px}
 .two.sellg{grid-template-columns:1fr 360px}
+.badge{background:var(--orange);color:#1d2b29;border-radius:99px;padding:1px 9px;font-size:12px;font-weight:800;margin-left:8px}.btn.or{background:var(--orange);color:#1d2b29}
+.cards4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}.cards4 b.big{display:block;font-size:26px;margin:4px 0}.cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.nrow{display:flex;gap:14px;align-items:center;margin-bottom:12px;cursor:pointer}.nrow.unread{background:var(--sel)}.bell{position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+@media (max-width:860px){.cards4{grid-template-columns:1fr 1fr}.cols2{grid-template-columns:1fr}}
 @media (max-width:860px){.two.sellg{grid-template-columns:1fr}.cards3{grid-template-columns:1fr}}
 @media (max-width:860px){
  .split{grid-template-columns:1fr}.split .left{display:none}
@@ -111,9 +115,10 @@ const DB = {
     const d = store.get('pf_db') || {users:[], nextId:1, settings:{shop_name:'', shop_address:'', shop_contact:'', expiry_alert_days:30}};
     d.products = d.products || []; d.batches = d.batches || []; d.movements = d.movements || [];   // M2 tables
     d.nextProd = d.nextProd || 1; d.nextBatch = d.nextBatch || 1;
-    d.sales = d.sales || []; d.nextSale = d.nextSale || 1; return d;                          // M3 tables
+    d.sales = d.sales || []; d.nextSale = d.nextSale || 1;
+    d.notifs = d.notifs || []; d.reads = d.reads || []; d.nextNotif = d.nextNotif || 1; return d;     // M4 tables                          // M3 tables
   },
-  save(d){ store.set('pf_db', d); }
+  save(d){ refreshNotifs(); store.set('pf_db', d); updateBadge(); }   // every save re-checks the alerts first
 };
 let db = DB.load();
 let me = null;                                           // the logged-in user
@@ -187,9 +192,10 @@ window.addEventListener('hashchange', route);
 
 function shell(r){
   rcptSale = null;                                                 // leaving a screen closes any open receipt
-  const links = NAV.filter(n => n.roles.includes(me.role)).map(n => `<a href="#/${n.id}" class="${r===n.id?'on':''}">${n.label}</a>`).join('');
+  const links = NAV.filter(n => n.roles.includes(me.role)).map(n => `<a href="#/${n.id}" class="${r===n.id?'on':''}">${n.label}${n.id === 'notifications' ? ` <span class="badge" id="nbadge">${unreadCount()}</span>` : ''}</a>`).join('');
   $('#app').innerHTML = `<div class="shell"><aside><div class="brand">${LOGO}PetFeed</div><nav>${links}</nav>
     <div class="foot"><span>Logged in as ${cap(me.role)}</span><a href="#/password" class="${r==='password'?'on':''}">Change Password</a><a href="#" onclick="logout();return false">Logout</a></div></aside><main id="main"></main></div>`;
+  updateBadge();
   (PAGES[r] || (() => {}))();
 }
 function logout(){ clearSession(); me = null; location.hash = '#/'; route(); }
@@ -289,8 +295,8 @@ async function saveForced(){
 
 /* ===== 8. PAGES INSIDE THE APP ===== */
 const PAGES = {
-  dashboard: soon('Dashboard', 'M4'), sell: () => sellPage(), history: () => historyPage(),
-  inventory: () => inventoryPage(), notifications: soon('Notifications', 'M4'),
+  dashboard: () => dashPage(), sell: () => sellPage(), history: () => historyPage(),
+  inventory: () => inventoryPage(), notifications: () => notifPage(),
 
   /* Change Password: everyone, own password only */
   password(){
@@ -533,7 +539,7 @@ function writeOff(id){
   if (!b || !isExp(b) || b.qty < 1) return;                        // only expired batches can be written off
   const p = db.products.find(x => x.id === b.product_id);
   if (!confirm(`Write off ${b.qty} units of ${p.name} (batch ${b.batch_no})? This cannot be undone.`)) return;
-  logMove(p.id, b.id, 'WRITE_OFF', -b.qty, 'Expired', ''); b.qty = 0; DB.save(db); tabExpiry();
+  logMove(p.id, b.id, 'WRITE_OFF', -b.qty, 'Expired', ''); b.qty = 0; DB.save(db); $('#tab') ? tabExpiry() : notifPage();   // works from Expiry Tracking and from Notifications
 }
 
 /* --- Sample data (Owner, only when there are no products): the items from the mockup --- */
@@ -544,9 +550,9 @@ function loadSample(){
     ['Dog Biscuits 300g',0,75,5,[['B-084',11,'2026-11-04']]], ['Rabbit Pellets 1kg',0,150,5,[['B-077',6,'2026-10-12']]], ['Fish Food 50g',3,45,5,[['B-070',2]]]];
   S.forEach(([name, c, price, low, bs]) => {
     const p = {id:db.nextProd++, name, category:CATS[c], price, low_level:low, barcode:''}; db.products.push(p);
-    bs.forEach(([bn, q, ex]) => { const b = {id:db.nextBatch++, product_id:p.id, batch_no:bn, qty:q, expiry:ex || null, created:Date.now()}; db.batches.push(b); logMove(p.id, b.id, 'STOCK_IN', q, 'Sample data', ''); });
+    bs.forEach(([bn, q, ex]) => { const b = {id:db.nextBatch++, product_id:p.id, batch_no:bn, qty:q, expiry:ex ? addDays(todayStr(), Math.round((Date.parse(ex) - Date.parse('2026-10-15')) / 864e5)) : null, created:Date.now()}; db.batches.push(b); logMove(p.id, b.id, 'STOCK_IN', q, 'Sample data', ''); });
   });
-  DB.save(db); inventoryPage();
+  sampleSales(); DB.save(db); inventoryPage();
 }
 
 /* ===== 9c. SELL (POS), RECEIPTS, SALES HISTORY (M3) ===== */
@@ -667,7 +673,110 @@ function drawHist(){
     <button class="btn full" onclick="rcptSale=db.sales.find(x=>x.id===${s.id});rcptBack='history';historyPage()">Reprint receipt</button></div>`;
 }
 
+/* ===== 9d. NOTIFICATIONS + DASHBOARD (M4) ===== */
+const dayOf = t => new Date(t).toLocaleDateString('en-CA', {timeZone:'Asia/Manila'});
+const addDays = (s, n) => { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const TYPE = {EXPIRED:{label:'Expired', cls:'x', ord:1}, EXPIRING_SOON:{label:'Expiring soon', cls:'r', ord:2}, LOW_STOCK:{label:'Low stock', cls:'a', ord:3}};
+const nfmt = t => { const tm = new Date(t).toLocaleTimeString('en-US', {timeZone:'Asia/Manila', hour:'numeric', minute:'2-digit'}), d = dayOf(t), td = todayStr();
+  return d === td ? 'Today, ' + tm : d === addDays(td, -1) ? 'Yesterday, ' + tm : dfmt(d).replace(/, \d{4}$/, '') + ', ' + tm; };
+
+/* Works out which alerts SHOULD exist right now and makes the saved list match.
+   One alert per key (LOW:product, SOON:batch, EXP:batch), so running it again never creates duplicates.
+   Alerts whose condition is gone (restocked, written off, threshold changed) are removed. It does not save: DB.save calls it. */
+function refreshNotifs(){
+  const want = {}, al = db.settings.expiry_alert_days;
+  db.products.forEach(p => {
+    if (!db.batches.some(b => b.product_id === p.id)) return;       // a product that never had stock raises no alert
+    const i = stockInfo(p);
+    if (i.sellable <= p.low_level) want['LOW:' + p.id] = {type:'LOW_STOCK', product_id:p.id, batch_id:null, title:`${p.name} is low on stock`,
+      detail:`${i.sellable} unit${i.sellable === 1 ? '' : 's'} left. The low stock level is ${p.low_level} units.`};
+    i.bs.forEach(b => {
+      if (!b.expiry) return; const d = dayDiff(b.expiry);
+      if (d < 0) want['EXP:' + b.id] = {type:'EXPIRED', product_id:p.id, batch_id:b.id, title:`${p.name} has expired`, detail:`${b.qty} units still in stock. Expired on ${dfmt(b.expiry)}.`};
+      else if (d <= al) want['SOON:' + b.id] = {type:'EXPIRING_SOON', product_id:p.id, batch_id:b.id, title:`${p.name} expires ${d === 0 ? 'today' : d === 1 ? 'in 1 day' : 'in ' + d + ' days'}`, detail:`${b.qty} units in stock. Expiry date is ${dfmt(b.expiry)}.`};
+    });
+  });
+  const old = {}; db.notifs.forEach(n => old[n.key] = n);
+  db.notifs = Object.keys(want).map(k => old[k] ? Object.assign(old[k], want[k]) : {id:db.nextNotif++, key:k, created_at:Date.now(), ...want[k]});
+  const ids = new Set(db.notifs.map(n => n.id)); db.reads = db.reads.filter(r => ids.has(r.notification_id));
+}
+/* Read state is per user: a row in db.reads means THAT user has read it. */
+const isRead = n => db.reads.some(r => r.notification_id === n.id && r.user_id === me.id);
+const unreadCount = () => me ? db.notifs.filter(n => !isRead(n)).length : 0;
+function updateBadge(){ const b = $('#nbadge'); if (!b || !me) return; const c = unreadCount(); b.textContent = c; b.style.display = c ? '' : 'none'; }
+/* Daily refresh: after 08:00 Manila time, once per day (checked every minute while the page is open) */
+function dailyCheck(){
+  if (!db.users.length) return;
+  const t = new Date().toLocaleTimeString('en-GB', {timeZone:'Asia/Manila', hour:'2-digit', minute:'2-digit', hourCycle:'h23'});
+  if (t >= '08:00' && db.lastDaily !== todayStr()){ db.lastDaily = todayStr(); DB.save(db); }
+}
+setInterval(dailyCheck, 60000);
+
+let nF = 'all';
+function notifPage(){
+  const own = me.role === 'OWNER', cnt = t => db.notifs.filter(n => !t || n.type === t).length;
+  const list = db.notifs.filter(n => nF === 'all' || n.type === nF).slice().sort((a, b) => (isRead(a) - isRead(b)) || (TYPE[a.type].ord - TYPE[b.type].ord) || b.created_at - a.created_at);
+  const chip = (k, l, t) => `<button class="chip ${nF===k?'on':''}" onclick="nF='${k}';notifPage()">${l} (${cnt(t)})</button>`;
+  $('#main').innerHTML = `<div class="hd"><div><h1>Notifications</h1><p class="mut">Items count as expiring soon when they expire within ${db.settings.expiry_alert_days} days. You can change this in Settings.</p></div>
+    <button class="btn alt" onclick="markAllRead()">Mark all as read</button></div>
+    <div class="chips">${chip('all','All',null)}${chip('LOW_STOCK','Low stock','LOW_STOCK')}${chip('EXPIRING_SOON','Expiring soon','EXPIRING_SOON')}${chip('EXPIRED','Expired','EXPIRED')}</div>
+    ${list.length ? list.map(n => { const rd = isRead(n), t = TYPE[n.type];
+      return `<div class="card nrow ${rd ? '' : 'unread'}" onclick="markRead(${n.id})"><div style="flex:1"><span class="pill ${t.cls}">${t.label}</span> ${rd ? '' : '<span class="pill" style="background:var(--teal);color:#fff">New</span>'} <span class="hint">${nfmt(n.created_at)}</span>
+      <div><b style="font-size:17px">${esc(n.title)}</b></div><div class="mut">${esc(n.detail)}</div></div>
+      ${n.type === 'EXPIRED' && own ? `<button class="btn alt" onclick="event.stopPropagation();writeOff(${n.batch_id})">Write off stock</button>` : `<button class="btn alt" onclick="event.stopPropagation();viewProd(${n.product_id},${n.id})">View product</button>`}</div>`; }).join('')
+      : '<div class="card"><p class="mut">Nothing to show. All stock levels and expiry dates look fine.</p></div>'}`;
+}
+function markRead(id){ const n = db.notifs.find(x => x.id === id); if (n && !isRead(n)) db.reads.push({notification_id:id, user_id:me.id, read_at:Date.now()}); DB.save(db); notifPage(); }
+function markAllRead(){ db.notifs.forEach(n => { if (!isRead(n)) db.reads.push({notification_id:n.id, user_id:me.id, read_at:Date.now()}); }); DB.save(db); notifPage(); }
+function viewProd(pid, nid){
+  const n = db.notifs.find(x => x.id === nid); if (n && !isRead(n)) db.reads.push({notification_id:nid, user_id:me.id, read_at:Date.now()});
+  DB.save(db); invTab = 'list'; invSel = pid; invForm = null; invQ = ''; invCat = ''; invStat = ''; location.hash = '#/inventory';
+}
+
+/* --- Dashboard (Owner only): every number comes from the same sales, stock and alert data as the other pages --- */
+function dashPage(){
+  need('OWNER');
+  const td = todayStr(), lw = addDays(td, -7), tds = db.sales.filter(s => dayOf(s.at) === td), lws = db.sales.filter(s => dayOf(s.at) === lw);
+  const sum = a => a.reduce((t, s) => t + cents(s.total), 0), tot = sum(tds), n = tds.length, last = sum(lws), chg = last ? (tot - last) / last * 100 : null;
+  const byHour = Array(24).fill(0); tds.forEach(s => byHour[Number(new Date(s.at).toLocaleString('en-GB', {timeZone:'Asia/Manila', hour:'2-digit', hourCycle:'h23'}))] += cents(s.total));
+  const used = byHour.map((v, h) => v ? h : -1).filter(h => h >= 0), lo = Math.min(8, ...used), hi = Math.max(20, ...used), mx = Math.max(1, ...byHour), W = 44;
+  const bars = byHour.slice(lo, hi + 1).map((v, k) => { const h = lo + k, bh = Math.round(v / mx * 110);
+    return `<rect x="${k * W + 8}" y="${130 - bh}" width="28" height="${bh}" rx="5" fill="var(--teal)"><title>${money(v)}</title></rect><text x="${k * W + 22}" y="150" text-anchor="middle" font-size="11" fill="var(--mut)">${h % 12 || 12}${h < 12 ? 'a' : 'p'}</text>`; }).join('');
+  const items = {}; tds.forEach(s => s.items.forEach(i => items[i.name] = (items[i.name] || 0) + i.qty));
+  const best = Object.entries(items).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const low = db.notifs.filter(x => x.type === 'LOW_STOCK'), soon = db.notifs.filter(x => x.type === 'EXPIRING_SOON');
+  const pm = m => money(sum(tds.filter(s => s.method === m)));
+  const kv = (a, b) => `<div class="kv"><span>${a}</span><b>${b}</b></div>`;
+  $('#main').innerHTML = `<div class="hd"><div><h1>Dashboard</h1><p class="mut">${dfmt(td)}</p></div><div style="display:flex;gap:10px;align-items:center">
+    <a class="bell" href="#/notifications" aria-label="Unread notifications"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge" style="margin:0">${unreadCount()}</span></a>
+    <a class="btn or" href="#/sell">New sale</a></div></div>
+    <div class="cards4"><div class="card"><span class="mut">Today's sales</span><b class="big">${money(tot)}</b></div><div class="card"><span class="mut">Transactions</span><b class="big">${n}</b></div>
+    <div class="card"><span class="mut">Average sale</span><b class="big">${n ? money(Math.round(tot / n)) : '—'}</b></div>
+    <div class="card"><span class="mut">vs. same weekday last week</span><b class="big" style="color:${chg === null ? 'var(--ink)' : chg >= 0 ? 'var(--grn)' : 'var(--red)'}">${chg === null ? '—' : (chg >= 0 ? '▲ +' : '▼ ') + chg.toFixed(0) + '%'}</b><span class="hint">${last ? dfmt(lw) + ': ' + money(last) : 'No sales on ' + dfmt(lw)}</span></div></div>
+    <div class="cols2"><div class="card"><h2>Sales by hour</h2><div style="overflow-x:auto"><svg viewBox="0 0 ${(hi - lo + 1) * W + 8} 158" style="min-width:${(hi - lo + 1) * 30}px;width:100%" role="img" aria-label="Sales by hour today">${bars}</svg></div></div>
+    <div class="card"><h2>Payment breakdown</h2>${kv('Cash', pm('Cash'))}${kv('GCash', pm('GCash'))}${kv('Card', pm('Card'))}<h2 style="margin-top:16px">Best sellers today</h2>${best.length ? best.map(([nm, q], i) => kv(`${i + 1}. ${esc(nm)}`, q + ' sold')).join('') : '<p class="mut">No sales yet today.</p>'}</div></div>
+    <div class="cols2"><div class="card"><h2>Low-stock items: ${low.length}</h2>${low.length ? low.slice(0, 6).map(x => kv(esc(x.title.replace(' is low on stock', '')), x.detail.split('.')[0])).join('') : '<p class="mut">None.</p>'}<p style="margin:10px 0 0"><a href="#/notifications" onclick="nF='LOW_STOCK'">View low stock</a></p></div>
+    <div class="card"><h2>Expiring within ${db.settings.expiry_alert_days} days: ${soon.length}</h2>${soon.length ? soon.slice(0, 6).map(x => kv(esc(x.title.split(' expires')[0]), x.title.split(' expires ')[1])).join('') : '<p class="mut">None.</p>'}<p style="margin:10px 0 0"><a href="#/notifications" onclick="nF='EXPIRING_SOON'">View expiring items</a></p></div></div>
+    <div class="card tbl"><h2 style="padding:18px 18px 0">Recent sales</h2>${db.sales.length ? `<table><thead><tr><th>Receipt No.</th><th>Time</th><th>Items</th><th>Payment</th><th>Total</th></tr></thead><tbody>${db.sales.slice(-5).reverse().map(s =>
+      `<tr><td><b>${s.receipt_no}</b></td><td>${nfmt(s.at)}</td><td>${s.items.length} item${s.items.length === 1 ? '' : 's'}</td><td>${s.method}</td><td><b>${peso(s.total)}</b></td></tr>`).join('')}</tbody></table>` : '<p class="mut" style="padding:18px">No sales yet.</p>'}</div>`;
+}
+
+/* --- Sample sales: 16 sales over the last 7 days (DEMO DATA). They do not change stock; the sample stock is already the "on hand" amount. --- */
+function sampleSales(){
+  const ps = db.products, t0 = todayStr(), list = [];
+  for (let k = 0; k < 16; k++){
+    const hh = String(9 + (k * 5) % 10).padStart(2, '0'), mm = String((k * 17) % 60).padStart(2, '0');
+    const at = Math.min(Date.parse(`${addDays(t0, -(6 - Math.floor(k * 7 / 16)))}T${hh}:${mm}:00+08:00`), Date.now() - (16 - k) * 60000);
+    const picks = [[ps[(k * 3) % ps.length], 1 + k % 3]]; if (k % 2) picks.push([ps[(k * 5 + 2) % ps.length], 1]);
+    const items = []; picks.forEach(([p, q]) => { if (!items.some(i => i.product_id === p.id)) items.push({product_id:p.id, name:p.name, unit_price:p.price, qty:q, line_total:cents(p.price) * q / 100}); });
+    const total = items.reduce((s, i) => s + cents(i.line_total), 0), method = ['Cash','Cash','GCash','Card'][k % 4], recv = method === 'Cash' ? Math.ceil(total / 10000) * 10000 : total;
+    list.push({at, user_id:me.id, sold_by:me.full_name, items, total:total / 100, method, amount_received:recv / 100, change:(recv - total) / 100, reference:method === 'Cash' ? '' : 'REF' + (1000 + k)});
+  }
+  list.sort((a, b) => a.at - b.at).forEach(s => { s.id = db.nextSale++; s.receipt_no = 'R-' + String(s.id).padStart(6, '0'); db.sales.push(s); });   // receipt numbers follow time order
+}
+
 /* ===== 10. START ===== */
+dailyCheck();
 route();
 </script>
 </body>
