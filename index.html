@@ -389,7 +389,7 @@ const todayStr = () => new Date().toLocaleDateString('en-CA', {timeZone:'Asia/Ma
 const dayDiff = d => Math.round((Date.parse(d + 'T00:00:00Z') - Date.parse(todayStr() + 'T00:00:00Z')) / 864e5);
 const dfmt = d => d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', {timeZone:'UTC', month:'short', day:'numeric', year:'numeric'}) : 'None';
 const isExp = b => !!b.expiry && dayDiff(b.expiry) < 0;                                        // expired = date is before today
-const SPILL = {'In stock':'g', 'Low stock':'a', 'Expiring soon':'r', 'Expired':'x', 'Out of stock':''};
+const SPILL = {'In stock':'g', 'Low stock':'a', 'Expiring soon':'r', 'Expired':'x', 'Out of stock':'', 'Archived':''};
 
 /* Stock numbers + status for one product. Order of rules: Out of stock, Expired, Expiring soon, Low stock, In stock.
    'Expired' shows only when there is still SELLABLE stock next to an expired batch. */
@@ -421,7 +421,7 @@ function inventoryPage(){
     <div class="tabs">${tabs.map(([k, l]) => `<a href="#" class="${invTab===k?'on':''}" onclick="invTab='${k}';invForm=null;inventoryPage();return false">${l}${k==='stockin'?' <span class="tag">Owner only</span>':''}</a>`).join('')}</div><div id="tab"></div>`;
   ({list:tabList, stockin:tabStockIn, adjust:tabAdjust, expiry:tabExpiry})[invTab]();
 }
-const prodOptions = sel => db.products.map(p => `<option value="${p.id}" ${p.id===sel?'selected':''}>${esc(p.name)}</option>`).join('');
+const prodOptions = sel => db.products.filter(p => !p.archived).map(p => `<option value="${p.id}" ${p.id===sel?'selected':''}>${esc(p.name)}</option>`).join('');
 
 /* --- Product List --- */
 function tabList(){
@@ -434,7 +434,7 @@ function tabList(){
 }
 function drawList(){
   const own = me.role === 'OWNER';
-  const rows = db.products.map(p => ({p, i:stockInfo(p)})).filter(({p, i}) => (!invQ || p.name.toLowerCase().includes(invQ.toLowerCase())) && (!invCat || p.category === invCat) && (!invStat || i.status === invStat));
+  const rows = db.products.map(p => ({p, i:Object.assign(stockInfo(p), p.archived ? {status:'Archived'} : {})})).filter(({p, i}) => (!invQ || p.name.toLowerCase().includes(invQ.toLowerCase())) && (!invCat || p.category === invCat) && (!invStat || i.status === invStat));
   $('#plist').innerHTML = !db.products.length
     ? `<div style="padding:24px"><p class="mut">No products yet.${own ? ' Add your first product, or load sample data to try the prototype.' : ' Ask the Owner to add products.'}</p>${own ? '<button class="btn alt" onclick="loadSample()">Load sample data</button>' : ''}</div>`
     : !rows.length ? '<p class="mut" style="padding:24px">No products match these filters.</p>'
@@ -446,7 +446,7 @@ function drawList(){
     ${i.sellable !== i.total ? `<div class="kv"><span>Sellable</span><b>${i.sellable} units</b></div>` : ''}<div class="kv"><span>Low stock level</span><b>${p.low_level} units</b></div>
     ${p.barcode ? `<div class="kv"><span>Barcode</span><b>${esc(p.barcode)}</b></div>` : ''}<h2 style="margin-top:16px">Batches</h2>
     ${i.bs.length ? i.bs.sort((a, b) => (a.expiry || '9999').localeCompare(b.expiry || '9999')).map(b => `<div class="bat"><span><b>Batch ${esc(b.batch_no)}</b> · ${b.qty} units</span><span>${b.expiry ? (isExp(b) ? '<b style="color:var(--red)">Expired ' : 'Exp. ') + dfmt(b.expiry) + (isExp(b) ? '</b>' : '') : 'No expiry'}</span></div>`).join('') : '<p class="mut">No stock on hand.</p>'}
-    ${own ? `<button class="btn full" onclick="invForm=${p.id};inventoryPage()">Edit product</button><button class="btn alt full" onclick="adjPre=${p.id};invTab='adjust';inventoryPage()">Adjust stock</button>` : ''}</div>`;
+    ${own ? `<button class="btn full" onclick="invForm=${p.id};inventoryPage()">Edit product</button><button class="btn alt full" onclick="adjPre=${p.id};invTab='adjust';inventoryPage()">Adjust stock</button><button class="btn danger full" onclick="toggleArchive(${p.id})">${p.archived ? 'Restore product' : 'Archive product'}</button>` : ''}</div>`;
 }
 function productForm(){
   const p = typeof invForm === 'number' ? db.products.find(x => x.id === invForm) : null;
@@ -570,7 +570,7 @@ function sellPage(){
 function drawGrid(){
   $('#chips').innerHTML = `<div class="chips">${['', ...CATS].map(c => `<button class="chip ${sellCat===c?'on':''}" onclick="sellCat='${c}';drawGrid()">${c || 'All'}</button>`).join('')}</div>`;
   const q = sellQ.trim().toLowerCase();
-  const ps = db.products.filter(p => (!sellCat || p.category === sellCat) && (!q || p.name.toLowerCase().includes(q) || (p.barcode && p.barcode === sellQ.trim())));
+  const ps = db.products.filter(p => !p.archived && (!sellCat || p.category === sellCat) && (!q || p.name.toLowerCase().includes(q) || (p.barcode && p.barcode === sellQ.trim())));
   $('#grid').innerHTML = !db.products.length ? '<p class="mut">No products yet. The Owner can add products under Inventory.</p>' : !ps.length ? '<p class="mut">No products match.</p>'
     : `<div class="grid">${ps.map(p => { const n = sellableOf(p), st = n === 0 ? 'color:var(--red)' : n <= p.low_level ? 'color:var(--amb);font-weight:700' : '';
       return `<button class="pc" ${n ? '' : 'disabled'} onclick="addCart(${p.id})"><small>${p.category}</small><b>${esc(p.name)}</b><span class="pr">${peso(p.price)}</span><div class="hint" style="${st}">${n === 0 ? 'Out of stock' : n <= p.low_level ? 'Low stock: ' + n + ' left' : n + ' in stock'}</div></button>`; }).join('')}</div>`;
@@ -610,12 +610,12 @@ function completeSale(){
   if (!cart.length) return say('Add at least one product.');
   const lines = []; let total = 0;
   for (const l of cart){                                                // re-check stock at the moment of sale
-    const p = db.products.find(x => x.id === l.pid); if (!p) return say('A product in the cart no longer exists.');
+    const p = db.products.find(x => x.id === l.pid); if (!p || p.archived) return say('A product in the cart is no longer for sale.');
     const av = sellableOf(p); if (l.qty > av) return say(`Only ${av} of ${p.name} left in sellable stock. Update the cart.`);
     lines.push({product_id:p.id, name:p.name, unit_price:p.price, qty:l.qty, line_total:cents(p.price) * l.qty / 100}); total += cents(p.price) * l.qty;
   }
   let method = 'Cash', recv = total, ref = '';
-  if (payM === 'CASH'){ recv = cents(Number(f('rc'))); if (f('rc') === '' || recv < total) return say('Amount received must be at least the total.'); }
+  if (payM === 'CASH'){ recv = cents(Number(f('rc'))); if (f('rc') === '' || recv < total) return say(f('rc') === '' ? 'Enter the amount received.' : 'Cash is short by ' + money(total - recv) + '.'); }
   else { method = f('pt'); ref = f('pf').trim(); if (!ref) return say('Enter the GCash or card reference number.'); }
   const snap = JSON.stringify(db);                                      // all-or-nothing: restore everything if anything fails
   try {
@@ -686,7 +686,7 @@ const nfmt = t => { const tm = new Date(t).toLocaleTimeString('en-US', {timeZone
 function refreshNotifs(){
   const want = {}, al = db.settings.expiry_alert_days;
   db.products.forEach(p => {
-    if (!db.batches.some(b => b.product_id === p.id)) return;       // a product that never had stock raises no alert
+    if (p.archived || !db.batches.some(b => b.product_id === p.id)) return;       // a product that never had stock raises no alert
     const i = stockInfo(p);
     if (i.sellable <= p.low_level) want['LOW:' + p.id] = {type:'LOW_STOCK', product_id:p.id, batch_id:null, title:`${p.name} is low on stock`,
       detail:`${i.sellable} unit${i.sellable === 1 ? '' : 's'} left. The low stock level is ${p.low_level} units.`};
@@ -773,6 +773,14 @@ function sampleSales(){
     list.push({at, user_id:me.id, sold_by:me.full_name, items, total:total / 100, method, amount_received:recv / 100, change:(recv - total) / 100, reference:method === 'Cash' ? '' : 'REF' + (1000 + k)});
   }
   list.sort((a, b) => a.at - b.at).forEach(s => { s.id = db.nextSale++; s.receipt_no = 'R-' + String(s.id).padStart(6, '0'); db.sales.push(s); });   // receipt numbers follow time order
+}
+
+/* Archive hides a product from selling, stock forms and alerts, but keeps its history. It can be restored. */
+function toggleArchive(id){
+  need('OWNER');
+  const p = db.products.find(x => x.id === id); if (!p) return;
+  if (!p.archived && !confirm(`Archive ${p.name}? It will no longer be sold or shown in alerts. You can restore it later.`)) return;
+  p.archived = !p.archived; DB.save(db); inventoryPage();
 }
 
 /* ===== 10. START ===== */
