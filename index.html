@@ -19,7 +19,7 @@ h1{font-size:28px;margin:0 0 4px}h2{font-size:18px;margin:0 0 10px}
 a{color:var(--teal);font-weight:700;text-decoration:none}
 .mut{color:var(--mut);margin:0}
 label{display:block;font-weight:700;margin:14px 0 6px}
-input,select{width:100%;padding:12px 14px;border:1px solid #8a9997;border-radius:12px;font:inherit;background:var(--card);color:var(--ink)}
+input,select{width:100%;padding:12px 14px;border:1px solid #8a9997;border-radius:12px;font:inherit;font-size:16px;background:var(--card);color:var(--ink)}
 input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 .hint{font-size:12.5px;color:var(--mut);margin:5px 0 0}
 .btn{background:var(--teal);color:#fff;border:0;border-radius:12px;padding:13px 18px;font:inherit;font-weight:800;cursor:pointer}
@@ -66,6 +66,9 @@ th{text-align:left;color:var(--mut);font-size:13px;padding:12px 16px;border-bott
 td{padding:14px 16px;border-bottom:1px solid var(--line)}tr.row{cursor:pointer}tr.sel td{background:var(--sel)}
 .kv{display:flex;justify-content:space-between;padding:7px 0}.kv span{color:var(--mut)}
 .form{max-width:640px}
+img,svg{max-width:100%}.cols2>*,.cards4>*,.cards3>*,.two>*{min-width:0}.menubtn{display:none;margin-left:auto;background:transparent;border:1px solid rgba(255,255,255,.6);color:#fff;border-radius:10px;padding:6px 14px;font-size:20px;cursor:pointer}.mbrand{display:none}
+.cartbar{display:none;position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));background:var(--teal);color:#fff;border:0;border-radius:14px;padding:14px 18px;justify-content:space-between;font:inherit;font-weight:800;z-index:15;box-shadow:0 6px 20px rgba(0,0,0,.3);cursor:pointer}
+@media (min-width:861px){.two.sellg #cart{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:8px 16px;font:inherit;font-weight:700;cursor:pointer}.chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}.pc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;text-align:left;font:inherit;color:var(--ink)}.pc:hover{border-color:var(--teal)}.pc[disabled]{opacity:.55;cursor:not-allowed}.pc small{color:var(--mut);font-weight:700}.pc b{display:block;margin:4px 0 6px}.pc .pr{color:var(--teal);font-size:20px;font-weight:800}
 .ln{display:grid;grid-template-columns:1fr auto 84px;gap:10px;align-items:center;padding:10px 0}.qty{display:flex;align-items:center;gap:8px}.qty button{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:18px;cursor:pointer}
@@ -82,9 +85,13 @@ td{padding:14px 16px;border-bottom:1px solid var(--line)}tr.row{cursor:pointer}t
 @media (max-width:860px){
  .split{grid-template-columns:1fr}.split .left{display:none}
  .shell{grid-template-columns:1fr}
- aside{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px}
- aside .brand{margin:0 8px 0 0}aside nav{display:flex;flex-wrap:wrap;gap:4px;flex:1 1 100%;order:3}
- aside .foot{display:flex;flex-wrap:wrap;align-items:center;order:2;margin-left:auto}aside .foot a{margin:0}
+ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--teal);z-index:30}
+ aside{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px;padding:10px 14px}
+ aside .brand{margin:0}.menubtn{display:inline-flex}aside nav,aside .foot{display:none;flex:1 1 100%}aside.open nav,aside.open .foot{display:block}aside a{padding:13px 14px}
+ .mbrand{display:flex;justify-content:center;margin-bottom:16px}#chips .chips,#hf.chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px}.chip{white-space:nowrap;flex:none}.cartbar:not([hidden]){display:flex}.two.sellg{padding-bottom:72px}#sq{max-width:none!important}
+ input,select,.btn,.chip{min-height:44px}h1{font-size:24px}th,td{padding:12px 10px}
+ .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}.tbl table{min-width:520px}#plist table,#hlist table,main[data-page=users] .tbl table{min-width:0}
+ #plist th:nth-child(2),#plist td:nth-child(2),#plist th:nth-child(5),#plist td:nth-child(5),#hlist th:nth-child(3),#hlist td:nth-child(3),#hlist th:nth-child(6),#hlist td:nth-child(6),main[data-page=users] th:nth-child(4),main[data-page=users] td:nth-child(4){display:none}
  .two{grid-template-columns:1fr}main{padding:16px}
 }
 @media print{body *{visibility:hidden}.code,.code *,.rcpt,.rcpt *{visibility:visible}.code{position:absolute;top:20px;left:0;right:0}.rcpt{position:absolute;top:0;left:0;width:80mm;border:0}}
@@ -193,8 +200,8 @@ window.addEventListener('hashchange', route);
 function shell(r){
   rcptSale = null;                                                 // leaving a screen closes any open receipt
   const links = NAV.filter(n => n.roles.includes(me.role)).map(n => `<a href="#/${n.id}" class="${r===n.id?'on':''}">${n.label}${n.id === 'notifications' ? ` <span class="badge" id="nbadge">${unreadCount()}</span>` : ''}</a>`).join('');
-  $('#app').innerHTML = `<div class="shell"><aside><div class="brand">${LOGO}PetFeed</div><nav>${links}</nav>
-    <div class="foot"><span>Logged in as ${cap(me.role)}</span><a href="#/password" class="${r==='password'?'on':''}">Change Password</a><a href="#" onclick="logout();return false">Logout</a></div></aside><main id="main"></main></div>`;
+  $('#app').innerHTML = `<div class="shell"><aside><div class="brand">${LOGO}PetFeed</div><button class="menubtn" aria-label="Menu" aria-expanded="false" onclick="toggleMenu(this)">☰</button><nav>${links}</nav>
+    <div class="foot"><span>Logged in as ${cap(me.role)}</span><a href="#/password" class="${r==='password'?'on':''}">Change Password</a><a href="#" onclick="logout();return false">Logout</a></div></aside><main id="main" data-page="${r}"></main></div>`;
   updateBadge();
   (PAGES[r] || (() => {}))();
 }
@@ -235,7 +242,7 @@ function loginPage(){
     <div><h2>Sales and stock, in one place.</h2><p style="opacity:.85;max-width:380px">A web-based point-of-sale and inventory management system for your pet shop.</p>
     <ul><li>Sell at the counter and print receipts</li><li>Track stock, batches, and expiry dates</li><li>Get low stock and expiry notifications</li></ul></div>
     <small style="opacity:.8">PetFeed: A Web-Based Point-of-Sale and Inventory Management System</small></div>
-    <div class="right"><div class="box"><div class="card" ${enter('doLogin')}><h1>Welcome back</h1><p class="mut">Log in to your PetFeed account.</p>
+    <div class="right"><div class="box"><div class="brand mbrand">${LOGO}PetFeed</div><div class="card" ${enter('doLogin')}><h1>Welcome back</h1><p class="mut">Log in to your PetFeed account.</p>
     ${field('lu','Username','text','Enter your username')}
     <div style="position:relative">${field('lp','Password','password','Enter your password')}<button class="eye" type="button" aria-label="Show or hide password" onclick="toggleEye('lp')">${EYE}</button></div>
     <p style="text-align:right;margin:8px 0 0"><a href="#/forgot">Forgot password?</a></p>${noteBox()}
@@ -308,7 +315,7 @@ const PAGES = {
 
   /* User Management (Owner only) */
   users(){
-    const rows = db.users.map(u => `<tr class="row ${u.id===selU?'sel':''}" onclick="selU=${u.id};adding=false;PAGES.users()"><td><b>${esc(u.username)}</b></td><td>${cap(u.role)}</td>
+    const rows = db.users.map(u => `<tr class="row ${u.id===selU?'sel':''}" onclick="selU=${u.id};adding=false;PAGES.users();panelIntoView('uside')"><td><b>${esc(u.username)}</b></td><td>${cap(u.role)}</td>
       <td><span class="pill ${u.status==='ACTIVE'?'g':''}">${u.status==='ACTIVE'?'Active':'Disabled'}</span></td><td>${u.last_login?fmt(u.last_login):'Never'}</td></tr>`).join('');
     const u = db.users.find(x => x.id === selU);
     let side = '';
@@ -322,8 +329,8 @@ const PAGES = {
         <button class="btn full" style="margin-top:6px" onclick="resetPw(${u.id})">Reset password</button>` : noteBox()}
       ${u.id!==me.id ? `<button class="btn danger full" onclick="toggleUser(${u.id})">${u.status==='ACTIVE'?'Disable account':'Enable account'}</button>` : '<p class="hint">You cannot disable your own account.</p>'}</div>`;
     $('#main').innerHTML = `<div class="two"><section><div class="hd"><div><h1>User Management</h1><p class="mut">Only the Owner can create, disable, and reset staff accounts.</p></div>
-      <button class="btn" onclick="adding=true;PAGES.users()">Add staff account</button></div>
-      <div class="card tbl"><table><thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Last login</th></tr></thead><tbody>${rows}</tbody></table></div></section><section>${side}</section></div>`;
+      <button class="btn" onclick="adding=true;PAGES.users();panelIntoView('uside')">Add staff account</button></div>
+      <div class="card tbl"><table><thead><tr><th>Username</th><th>Role</th><th>Status</th><th>Last login</th></tr></thead><tbody>${rows}</tbody></table></div></section><section id="uside">${side}</section></div>`;
   },
 
   /* Settings (Owner only) */
@@ -439,7 +446,7 @@ function drawList(){
     ? `<div style="padding:24px"><p class="mut">No products yet.${own ? ' Add your first product, or load sample data to try the prototype.' : ' Ask the Owner to add products.'}</p>${own ? '<button class="btn alt" onclick="loadSample()">Load sample data</button>' : ''}</div>`
     : !rows.length ? '<p class="mut" style="padding:24px">No products match these filters.</p>'
     : `<table><thead><tr><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Nearest expiry</th><th>Status</th></tr></thead><tbody>${rows.map(({p, i}) =>
-      `<tr class="row ${p.id===invSel?'sel':''}" onclick="invSel=${p.id};drawList()"><td><b>${esc(p.name)}</b></td><td>${p.category}</td><td>${peso(p.price)}</td><td>${i.total}</td><td>${dfmt(i.nearest)}</td><td><span class="pill ${SPILL[i.status]}">${i.status}</span></td></tr>`).join('')}</tbody></table>`;
+      `<tr class="row ${p.id===invSel?'sel':''}" onclick="invSel=${p.id};drawList();panelIntoView('pside')"><td><b>${esc(p.name)}</b></td><td>${p.category}</td><td>${peso(p.price)}</td><td>${i.total}</td><td>${dfmt(i.nearest)}</td><td><span class="pill ${SPILL[i.status]}">${i.status}</span></td></tr>`).join('')}</tbody></table>`;
   const p = db.products.find(x => x.id === invSel), i = p && stockInfo(p);
   $('#pside').innerHTML = !p ? '' : `<div class="card"><h2>${esc(p.name)}</h2><p class="mut">Product details</p><hr style="border:0;border-top:1px solid var(--line)">
     <div class="kv"><span>Category</span><b>${p.category}</b></div><div class="kv"><span>Price</span><b>${peso(p.price)}</b></div><div class="kv"><span>In stock</span><b>${i.total} units</b></div>
@@ -564,7 +571,7 @@ const cartTotal = () => cart.reduce((s, l) => { const p = db.products.find(x => 
 function sellPage(){
   if (rcptSale) return receiptPage();
   $('#main').innerHTML = `<div class="two sellg"><section><div class="hd"><h1>Sell</h1><input id="sq" style="max-width:340px" placeholder="Search product name or scan barcode" value="${esc(sellQ)}" oninput="sellQ=this.value;drawGrid()" onkeydown="if(event.key==='Enter')scanCode()"></div>
-    <div id="chips"></div><div id="grid"></div></section><section id="cart" class="card"></section></div>`;
+    <div id="chips"></div><div id="grid"></div></section><section id="cart" class="card"></section></div><button id="cbar" class="cartbar" hidden onclick="$('#cart').scrollIntoView({behavior:'smooth'})"></button>`;
   drawGrid(); drawCart();
 }
 function drawGrid(){
@@ -600,6 +607,7 @@ function drawCart(){
     ${cash ? `<label for="rc">Amount received</label><input id="rc" type="number" min="0" step="0.01" value="${esc(recvAmt)}" oninput="recvAmt=this.value;drawChange()"><div class="chg"><span>Change</span><span id="chg"></span></div>`
       : `<label for="pt">Paid with</label><select id="pt"><option>GCash</option><option>Card</option></select>${field('pf', 'Reference number', 'text', 'Enter the reference number')}`}
     ${noteBox()}<button class="btn full" onclick="completeSale()" ${rows.length ? '' : 'disabled'}>Complete sale and show receipt</button>`;
+  const cb = $('#cbar'); if (cb){ const k = cart.reduce((s, l) => s + l.qty, 0); cb.hidden = !k; cb.innerHTML = `<span>View cart · ${k} item${k === 1 ? '' : 's'}</span><span>${money(cartTotal())}</span>`; }   // phone: floating cart bar
   drawChange();
 }
 function drawChange(){
@@ -663,7 +671,7 @@ function drawHist(){
   const rows = mine.filter(s => (hPer === 'today' ? day(s.at) === today : hPer === 'week' ? day(s.at) >= weekStart : day(s.at).slice(0, 7) === today.slice(0, 7))
     && (!hPay || s.method === hPay) && (!hQ.trim() || s.receipt_no.toLowerCase().includes(hQ.trim().toLowerCase())));
   $('#hlist').innerHTML = rows.length ? `<table><thead><tr><th>Receipt No.</th><th>Date and time</th><th>Items</th><th>Payment</th><th>Total</th><th></th></tr></thead><tbody>${rows.map(s =>
-    `<tr class="row ${s.id===hSel?'sel':''}" onclick="hSel=${s.id};drawHist()"><td><b>${s.receipt_no}</b></td><td>${fmt(s.at)}</td><td>${s.items.length} item${s.items.length === 1 ? '' : 's'}</td><td>${s.method}</td><td><b>${peso(s.total)}</b></td><td><a href="#" onclick="hSel=${s.id};drawHist();return false">View</a></td></tr>`).join('')}</tbody></table>`
+    `<tr class="row ${s.id===hSel?'sel':''}" onclick="hSel=${s.id};drawHist();panelIntoView('hside')"><td><b>${s.receipt_no}</b></td><td>${fmt(s.at)}</td><td>${s.items.length} item${s.items.length === 1 ? '' : 's'}</td><td>${s.method}</td><td><b>${peso(s.total)}</b></td><td><a href="#" onclick="hSel=${s.id};drawHist();panelIntoView('hside');return false">View</a></td></tr>`).join('')}</tbody></table>`
     : '<p class="mut" style="padding:24px">No sales found for these filters.</p>';
   const s = mine.find(x => x.id === hSel);
   $('#hside').innerHTML = !s ? '' : `<div class="card"><h2>Sale ${s.receipt_no}</h2><p class="mut">${fmt(s.at)} · Sold by ${esc(s.sold_by)}</p><hr style="border:0;border-top:1px solid var(--line)">
@@ -781,6 +789,13 @@ function toggleArchive(id){
   const p = db.products.find(x => x.id === id); if (!p) return;
   if (!p.archived && !confirm(`Archive ${p.name}? It will no longer be sold or shown in alerts. You can restore it later.`)) return;
   p.archived = !p.archived; DB.save(db); inventoryPage();
+}
+
+/* ===== 9e. RESPONSIVE HELPERS ===== */
+function toggleMenu(b){ const o = $('aside').classList.toggle('open'); b.setAttribute('aria-expanded', o); }
+function panelIntoView(id){                                         // on a phone the detail panel sits below the list, so scroll to it
+  if (window.innerWidth > 860) return;
+  setTimeout(() => { const e = $('#' + id); if (e && e.innerHTML.trim()) e.scrollIntoView({behavior:'smooth', block:'start'}); }, 30);
 }
 
 /* ===== 10. START ===== */
